@@ -1,7 +1,7 @@
 <template>
   <div>
-<!--    <el-button @click="beginSelectLayer()">选区</el-button>-->
-<!--    <el-button @click="endSelectLayer()">清除</el-button>-->
+    <el-button @click="beginSelectLayer()">选区</el-button>
+    <el-button @click="endSelectLayer()">结束选区</el-button>
     <el-select v-model="selectedValue" placeholder="请选择" @change="toggleDrawLayer()">
       <el-option
           v-for="item in options"
@@ -29,8 +29,8 @@ import { useGeographic } from "ol/proj";
 
 import GeoJSON from "ol/format/GeoJSON";
 
-import heatData from "./all_month.json";
-import countriesData from "./countries.json";
+import heatData from "../assets/all_month.json";
+import countriesData from "../assets/countries.json";
 
 useGeographic();
 export default {
@@ -98,7 +98,7 @@ export default {
       });
 
       this.toggleHeatMapLayer();
-      // this.toggleSelectLayer();
+      this.toggleSelectLayer();
       this.toggleDrawLayer()
     },
 
