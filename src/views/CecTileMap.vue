@@ -2,12 +2,17 @@
   <div>
     <el-button @click="beginSelectLayer()">选区</el-button>
     <el-button @click="endSelectLayer()">结束选区</el-button>
-    <el-select v-model="selectedValue" placeholder="请选择" @change="toggleDrawLayer()">
+    <el-select
+      v-model="selectedValue"
+      placeholder="请选择"
+      @change="toggleDrawLayer()"
+    >
       <el-option
-          v-for="item in options"
-          :key="item.value"
-          :label="item.label"
-          :value="item.value">
+        v-for="item in options"
+        :key="item.value"
+        :label="item.label"
+        :value="item.value"
+      >
       </el-option>
     </el-select>
     <div id="map" style="width: 99vw; height: 90vh;"></div>
@@ -45,26 +50,29 @@ export default {
       heatmapLayer: null,
       draw: null,
       snap: null,
-      options: [{
-        value: 'Point',
-        label: 'Point'
-      }, {
-        value: 'LineString',
-        label: 'LineString'
-      }, {
-        value: 'Circle',
-        label: 'Circle'
-      }, {
-        value: 'None',
-        label: 'None'
-      }],
-      selectedValue: 'None',
-      aaa: []
+      options: [
+        {
+          value: "Point",
+          label: "Point",
+        },
+        {
+          value: "LineString",
+          label: "LineString",
+        },
+        {
+          value: "Circle",
+          label: "Circle",
+        },
+        {
+          value: "None",
+          label: "None",
+        },
+      ],
+      selectedValue: "None",
+      aaa: [],
     };
   },
-  watch: {
-
-  },
+  watch: {},
   mounted() {
     this.initMap();
   },
@@ -76,7 +84,8 @@ export default {
         }),
       });
 
-      this.map = new Map({  // 初始化map
+      this.map = new Map({
+        // 初始化map
         layers: [raster],
         target: "map",
         view: new View({
@@ -93,13 +102,12 @@ export default {
             new olControl.FullScreen(),
             new olControl.ZoomSlider(),
             new olControl.MousePosition(),
-
           ]),
       });
 
       this.toggleHeatMapLayer();
       this.toggleSelectLayer();
-      this.toggleDrawLayer()
+      this.toggleDrawLayer();
     },
 
     toggleHeatMapLayer() {
@@ -151,25 +159,24 @@ export default {
       this.map.removeInteraction(this.draw);
       this.map.removeInteraction(this.snap);
     },
-    toggleDrawLayer(){
-      const source = new VectorSource({wrapX: false});
+    toggleDrawLayer() {
+      const source = new VectorSource({ wrapX: false });
       const drawLayer = new VectorLayer({
         source: source,
       });
-      if(this.selectedValue !== 'None'){
+      if (this.selectedValue !== "None") {
         this.map.removeInteraction(this.draw); //重置
         this.draw = new olInteraction.Draw({
           source: source,
           type: this.selectedValue,
-        })
+        });
         this.map.addInteraction(this.draw);
-      }else{
+      } else {
         this.map.removeInteraction(this.draw);
       }
 
       this.map.addLayer(drawLayer);
-    }
-
+    },
   },
 };
 </script>
