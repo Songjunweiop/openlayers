@@ -1,7 +1,7 @@
 <template>
   <div>
-    <el-button @click="beginSelectLayer()">选区</el-button>
-    <el-button @click="endSelectLayer()">结束选区</el-button>
+    <!--    <el-button @click="beginSelectLayer()">选区</el-button>-->
+    <!--    <el-button @click="endSelectLayer()">结束选区</el-button>-->
     <el-select
       v-model="selectedValue"
       placeholder="请选择"
@@ -30,12 +30,18 @@ import {
 import { Vector as VectorSource, OSM as OMSSource } from "ol/source";
 import * as olControl from "ol/control";
 import * as olInteraction from "ol/interaction";
-import { useGeographic } from "ol/proj";
+import { useGeographic, transform } from "ol/proj";
 
 import GeoJSON from "ol/format/GeoJSON";
 
 import heatData from "../assets/all_month.json";
 import countriesData from "../assets/countries.json";
+
+import { Stroke, Style, Fill } from 'ol/style';
+import Feature from 'ol/Feature';
+import LineString from 'ol/geom/LineString';
+import Point from 'ol/geom/Point'
+
 
 useGeographic();
 export default {
@@ -60,13 +66,17 @@ export default {
           label: "LineString",
         },
         {
+          value: "Polygon",
+          label: "Polygon",
+        },
+        {
           value: "Circle",
           label: "Circle",
         },
         {
           value: "None",
           label: "None",
-        },
+        }
       ],
       selectedValue: "None",
       aaa: [],
@@ -80,17 +90,20 @@ export default {
     initMap() {
       const raster = new TileLayer({
         source: new OMSSource({
-          layer: "toner",
+          // layer: "toner",
         }),
       });
+
+
+
 
       this.map = new Map({
         // 初始化map
         layers: [raster],
         target: "map",
         view: new View({
-          center: [0, 0],
-          zoom: 2,
+          center: [105, 30],
+          zoom: 5,
         }),
         interactions: new olInteraction.defaults({
           doubleClickZoom: true, //双击
@@ -106,8 +119,9 @@ export default {
       });
 
       this.toggleHeatMapLayer();
-      this.toggleSelectLayer();
+      // this.toggleSelectLayer();
       this.toggleDrawLayer();
+      this.toggleFlightLayer()
     },
 
     toggleHeatMapLayer() {
@@ -159,11 +173,15 @@ export default {
       this.map.removeInteraction(this.draw);
       this.map.removeInteraction(this.snap);
     },
+
     toggleDrawLayer() {
       const source = new VectorSource({ wrapX: false });
       const drawLayer = new VectorLayer({
         source: source,
       });
+
+
+      // 选择标记类型
       if (this.selectedValue !== "None") {
         this.map.removeInteraction(this.draw); //重置
         this.draw = new olInteraction.Draw({
@@ -177,8 +195,47 @@ export default {
 
       this.map.addLayer(drawLayer);
     },
-  },
-};
+
+    toggleFlightLayer() {
+      const points = [[116.399, 39.913], [104.057, 30.639]];
+
+      const featureLine = new Feature({
+        geometry: new LineString(points)
+      });
+
+      const vectorLine = new VectorSource({});
+      vectorLine.addFeature(featureLine);
+
+      const lineLayer = new VectorLayer({
+        source: vectorLine,
+        style: new Style({
+          fill: new Fill({ color: '#00FF00', weight: 4 }),
+          stroke: new Stroke({ color: '#00FF00', width: 2 })
+        })
+      });
+      this.map.addLayer(lineLayer);
+
+
+      const points1 = [[100, 40], [100, 50]];
+
+      const featureLine1 = new Feature({
+        geometry: new Point(points1)
+      });
+
+      const vectorLine1 = new VectorSource({});
+      vectorLine.addFeature(featureLine1);
+
+      const lineLayer1 = new VectorLayer({
+        source: vectorLine1,
+        style: new Style({
+          // fill: new Fill({ color: '#00FF00', weight: 4 }),
+          // stroke: new Stroke({ color: '#00FF00', width: 2 })
+        })
+      });
+      this.map.addLayer(lineLayer1);
+    }
+  }
+}
 </script>
 
 <style lang="scss">
@@ -186,14 +243,17 @@ export default {
   .ol-full-screen {
     top: 35px;
   }
+
   .ol-zoom {
     top: 68px;
     right: 0.5em;
     left: auto;
+
     .ol-zoom-out {
       margin-top: 206px;
     }
   }
+
   .ol-zoomslider {
     top: 95px;
     right: 0.5em;
