@@ -1,11 +1,22 @@
 <template>
   <div>
-    <!--    <el-button @click="beginSelectLayer()">选区</el-button>-->
-    <!--    <el-button @click="endSelectLayer()">结束选区</el-button>-->
+    <!-- <el-button @click="beginSelectLayer()">选区</el-button> -->
+    <!-- <el-button @click="endSelectLayer()">结束选区</el-button> -->
+    <el-button type="primary" @click="renderHeatLayer()"
+      >show heatMap</el-button
+    >
+    <el-button type="primary" @click="renderLineLayer()"
+      >show lineMap</el-button
+    >
+    <el-button type="primary" @click="renderPointLayer()"
+      >show pointMap</el-button
+    >
+    <el-button type="primary" @click="ranging()">测距</el-button>
+    <el-button type="primary" @click="surveyArea()">测面积</el-button>
     <el-select
       v-model="selectedValue"
       placeholder="请选择"
-      @change="toggleDrawLayer()"
+      @change="toggleDrawmapLayer()"
     >
       <el-option
         v-for="item in options"
@@ -15,6 +26,10 @@
       >
       </el-option>
     </el-select>
+    <div id="popup" class="ol-popup">
+      <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+      <div id="popup-content"></div>
+    </div>
     <div id="map" style="width: 99vw; height: 90vh;"></div>
   </div>
 </template>
@@ -30,18 +45,18 @@ import {
 import { Vector as VectorSource, OSM as OMSSource } from "ol/source";
 import * as olControl from "ol/control";
 import * as olInteraction from "ol/interaction";
-import { useGeographic, transform } from "ol/proj";
-
+import { useGeographic, transform, fromLonLat, toLonLat } from "ol/proj";
 import GeoJSON from "ol/format/GeoJSON";
+import { Stroke, Style, Fill, Circle, Text } from "ol/style";
+import Feature from "ol/Feature";
+import { LineString, Point } from "ol/geom";
+import Overlay from "ol/Overlay";
+import {toStringHDMS} from 'ol/coordinate';
 
+import Measure from "./Measure";
+//静态资源
 import heatData from "../assets/all_month.json";
 import countriesData from "../assets/countries.json";
-
-import { Stroke, Style, Fill } from 'ol/style';
-import Feature from 'ol/Feature';
-import LineString from 'ol/geom/LineString';
-import Point from 'ol/geom/Point'
-
 
 useGeographic();
 export default {
@@ -75,11 +90,42 @@ export default {
         },
         {
           value: "None",
-          label: "None",
-        }
+          label: "No do",
+        },
+      ],
+      points: [
+        [100, 40],
+        [110, 35],
+        [102, 25],
+        [108, 30],
+        [106, 36],
+      ],
+      pointArys: [
+        [
+          [104.057, 30.639],
+          [116.399, 39.913],
+        ],
+        [
+          [104.057, 30.639],
+          [113.064, 23.113],
+        ],
+        [
+          [104.057, 30.639],
+          [114.296, 30.593],
+        ],
+        [
+          [104.057, 30.639],
+          [91.178, 29.646],
+        ],
+        [
+          [104.057, 30.639],
+          [103.827, 36.058],
+        ],
       ],
       selectedValue: "None",
       aaa: [],
+      overlay: null,
+      local: null
     };
   },
   watch: {},
@@ -94,20 +140,34 @@ export default {
         }),
       });
 
+      var container = document.getElementById("popup");
+      var content = document.getElementById("popup-content");
+      var closer = document.getElementById("popup-closer");
+      console.log(container)
+      console.log(content)
 
-
+      this.overlay = new Overlay({
+        element: container,
+        autoPan: true,
+        autoPanAnimation: {
+          duration: 250,
+        },
+        // position: [102, 35]
+        // positioning: 'bottom-left'
+      });
+      console.log(this.overlay)
+      
 
       this.map = new Map({
-        // 初始化map
         layers: [raster],
         target: "map",
         view: new View({
-          center: [105, 30],
+          center: [102, 35],
           zoom: 5,
         }),
         interactions: new olInteraction.defaults({
-          doubleClickZoom: true, //双击
-          mouseWheelZoom: true, //滚轮
+          doubleClickZoom: true,
+          mouseWheelZoom: true,
         }).extend([new olInteraction.DragRotateAndZoom()]), //旋转
         controls: olControl
           .defaults()
@@ -116,20 +176,46 @@ export default {
             new olControl.ZoomSlider(),
             new olControl.MousePosition(),
           ]),
+        overlays: [this.overlay],
+      });
+      console.log(this.overlay)
+
+      // this.map.on("singleclick", function (e) {
+      //   console.log(e.coordinate);
+      // });
+      closer.onclick = () => {
+        this.overlay.setPosition(undefined);
+        closer.blur();
+        return false;
+      };
+
+      this.map.on("singleclick", evt => {
+        var coordinate = evt.coordinate;
+        this.local = coordinate
+        var hdms = coordinate;
+
+        content.innerHTML = "<p>You clicked here:</p><code>" + hdms + "</code>";
+        this.overlay.setPosition(coordinate);
       });
 
-      this.toggleHeatMapLayer();
-      // this.toggleSelectLayer();
-      this.toggleDrawLayer();
-      this.toggleFlightLayer()
+      // this.renderHeatLayer();
+      this.toggleSelectLayer();
+      // this.renderlineLayer();
+      // this.renderPointLayer();
+    },
+    ranging() {
+      Measure.measure(this.map, "length");
+    },
+    surveyArea() {
+      Measure.measure(this.map, "area");
     },
 
-    toggleHeatMapLayer() {
+    renderHeatLayer() {
       //渲染热力图层
       if (this.heatmapLayer) this.map.removeLayer(this.heatmapLayer);
 
       // if (!data.length) return;
-      const heatmap = new HeatmapLayer({
+      this.heatmapLayer = new HeatmapLayer({
         source: new VectorSource({
           features: new GeoJSON().readFeatures(heatData, {
             dataProjection: "EPSG:4326",
@@ -140,7 +226,7 @@ export default {
         radius: 8,
       });
 
-      this.map.addLayer(heatmap);
+      this.map.addLayer(this.heatmapLayer);
     },
     toggleSelectLayer() {
       //渲染选中图层
@@ -174,68 +260,105 @@ export default {
       this.map.removeInteraction(this.snap);
     },
 
-    toggleDrawLayer() {
+    toggleDrawmapLayer() {
+      console.log("执行了吗");
+
       const source = new VectorSource({ wrapX: false });
-      const drawLayer = new VectorLayer({
+      const drawmapLayer = new VectorLayer({
         source: source,
       });
 
-
       // 选择标记类型
       if (this.selectedValue !== "None") {
-        this.map.removeInteraction(this.draw); //重置
+        this.map.removeInteraction(this.draw);
+        // this.draw = null
+
         this.draw = new olInteraction.Draw({
           source: source,
           type: this.selectedValue,
         });
+
+        this.draw.on(
+          "drawend",
+          function (e) {
+            console.dir(e);
+            console.log(e.target.downPx_);
+
+            // helpTooltip = new Overlay({
+            //   element: e.target.downPx_,
+            //   offset: [15, 0],
+            //   positioning: "center-left",
+            // });
+            // this.map.addOverlay(helpTooltip);
+          },
+          this
+        );
+
+        const modify = new olInteraction.Modify({ source: source });
+        this.map.addInteraction(modify);
+
         this.map.addInteraction(this.draw);
       } else {
         this.map.removeInteraction(this.draw);
       }
-
-      this.map.addLayer(drawLayer);
+      this.map.addLayer(drawmapLayer);
     },
 
-    toggleFlightLayer() {
-      const points = [[116.399, 39.913], [104.057, 30.639]];
+    renderLineLayer() {
+      this.pointArys.map((curitem) => {
+        const lineFeatures = new Feature({
+          geometry: new LineString(curitem),
+        });
+        const vectorLineSource = new VectorSource({
+          features: [lineFeatures],
+        });
+        console.log(
+          vectorLineSource.getFeatures()[0].getGeometry().getCoordinates()
+        );
 
-      const featureLine = new Feature({
-        geometry: new LineString(points)
+        const lineLayer = new VectorLayer({
+          source: vectorLineSource,
+          style: new Style({
+            stroke: new Stroke({ color: "#00FF00", width: 4 }),
+          }),
+        });
+
+        const modify = new olInteraction.Modify({ source: vectorLineSource });
+        this.map.addInteraction(modify);
+        this.map.addLayer(lineLayer);
       });
+    },
 
-      const vectorLine = new VectorSource({});
-      vectorLine.addFeature(featureLine);
+    renderPointLayer() {
+      this.points.map((curpoint) => {
+        const pointFeatures = new Feature({
+          geometry: new Point(curpoint),
+        });
+        const vectorPointSource = new VectorSource({
+          features: [pointFeatures],
+        });
+        console.log(
+          vectorPointSource.getFeatures()[0].getGeometry().getCoordinates()
+        );
 
-      const lineLayer = new VectorLayer({
-        source: vectorLine,
-        style: new Style({
-          fill: new Fill({ color: '#00FF00', weight: 4 }),
-          stroke: new Stroke({ color: '#00FF00', width: 2 })
-        })
+        const pointLayer = new VectorLayer({
+          source: vectorPointSource,
+          style: new Style({
+            image: new Circle({
+              radius: 5,
+              fill: new Fill({ color: "red" }),
+              stroke: new Stroke({ color: "red", size: 1 }),
+            }),
+          }),
+        });
+        const modify = new olInteraction.Modify({ source: vectorPointSource });
+        this.map.addInteraction(modify);
+        console.log(modify);
+        this.map.addLayer(pointLayer);
       });
-      this.map.addLayer(lineLayer);
-
-
-      const points1 = [[100, 40], [100, 50]];
-
-      const featureLine1 = new Feature({
-        geometry: new Point(points1)
-      });
-
-      const vectorLine1 = new VectorSource({});
-      vectorLine.addFeature(featureLine1);
-
-      const lineLayer1 = new VectorLayer({
-        source: vectorLine1,
-        style: new Style({
-          // fill: new Fill({ color: '#00FF00', weight: 4 }),
-          // stroke: new Stroke({ color: '#00FF00', width: 2 })
-        })
-      });
-      this.map.addLayer(lineLayer1);
-    }
-  }
-}
+    },
+  },
+};
 </script>
 
 <style lang="scss">
@@ -259,6 +382,48 @@ export default {
     right: 0.5em;
     left: auto;
     background-color: transparent;
+  }
+  .ol-popup {
+    position: absolute;
+    background-color: white;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid #cccccc;
+    bottom: 12px;
+    left: -50px;
+    min-width: 280px;
+  }
+  .ol-popup:after,
+  .ol-popup:before {
+    top: 100%;
+    border: solid transparent;
+    content: " ";
+    height: 0;
+    width: 0;
+    position: absolute;
+    pointer-events: none;
+  }
+  .ol-popup:after {
+    border-top-color: white;
+    border-width: 10px;
+    left: 48px;
+    margin-left: -10px;
+  }
+  .ol-popup:before {
+    border-top-color: #cccccc;
+    border-width: 11px;
+    left: 48px;
+    margin-left: -11px;
+  }
+  .ol-popup-closer {
+    text-decoration: none;
+    position: absolute;
+    top: 2px;
+    right: 8px;
+  }
+  .ol-popup-closer:after {
+    content: "✖";
   }
 }
 </style>
