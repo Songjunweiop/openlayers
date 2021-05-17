@@ -26,34 +26,63 @@
       >
       </el-option>
     </el-select>
-    <div id="popup" class="ol-popup">
-      <a href="#" id="popup-closer" class="ol-popup-closer"></a>
-      <div id="popup-content"></div>
+    <div id="popup" class="ol-popup" ref="popup">
+      <a
+        href="#"
+        id="popup-closer"
+        class="ol-popup-closer"
+        @click="closeTooptips()"
+      ></a>
+      <div id="popup-content" ref="popup_content" v-html="content"></div>
     </div>
+    <!-- dddddddddddddddddddddddddddddddddddddddddd -->
+    <!-- <div id="popup" class="ol-popup">
+        <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+        <div id="popup-content"></div>
+    </div> -->
     <div id="map" style="width: 99vw; height: 90vh;"></div>
+    <!-- <div id="map" class="map"></div>
+    <form class="form-inline">
+      <label for="type">Measurement type &nbsp;</label>
+      <select id="type">
+        <option value="length">Length (LineString)</option>
+        <option value="area">Area (Polygon)</option>
+      </select>
+    </form> -->
+    CecTileMap @createPoint={fetch}
   </div>
 </template>
 
 <script>
 import "ol/ol.css";
 import { Map, View } from "ol";
+import { Projection } from "ol/proj";
 import {
   Heatmap as HeatmapLayer,
   Vector as VectorLayer,
   Tile as TileLayer,
 } from "ol/layer";
-import { Vector as VectorSource, OSM as OMSSource } from "ol/source";
+import { Vector as VectorSource, OSM as OSMSource } from "ol/source";
 import * as olControl from "ol/control";
 import * as olInteraction from "ol/interaction";
-import { useGeographic, transform, fromLonLat, toLonLat } from "ol/proj";
+import {
+  useGeographic,
+  transform,
+  fromLonLat,
+  toLonLat,
+  getTransform,
+} from "ol/proj";
 import GeoJSON from "ol/format/GeoJSON";
 import { Stroke, Style, Fill, Circle, Text } from "ol/style";
 import Feature from "ol/Feature";
-import { LineString, Point } from "ol/geom";
+import { LineString, Point, Polygon } from "ol/geom";
 import Overlay from "ol/Overlay";
-import {toStringHDMS} from 'ol/coordinate';
+import { toStringHDMS } from "ol/coordinate";
+import { getArea, getLength } from "ol/sphere";
+import { unByKey } from "ol/Observable";
 
 import Measure from "./Measure";
+// import Measure from "./Measurecopy";
 //静态资源
 import heatData from "../assets/all_month.json";
 import countriesData from "../assets/countries.json";
@@ -68,6 +97,8 @@ export default {
   data() {
     return {
       map: null,
+      container: "",
+      content: "",
       heatmapLayer: null,
       draw: null,
       snap: null,
@@ -125,7 +156,7 @@ export default {
       selectedValue: "None",
       aaa: [],
       overlay: null,
-      local: null
+      local: null,
     };
   },
   watch: {},
@@ -135,19 +166,40 @@ export default {
   methods: {
     initMap() {
       const raster = new TileLayer({
-        source: new OMSSource({
-          // layer: "toner",
+        source: new OSMSource(),
+      });
+      var source = new VectorSource();
+
+      var vector = new VectorLayer({
+        source: source,
+        style: new Style({
+          fill: new Fill({
+            color: "rgba(255, 255, 255, 0.2)",
+          }),
+          stroke: new Stroke({
+            color: "#ffcc33",
+            width: 2,
+          }),
+          image: new Circle({
+            radius: 7,
+            fill: new Fill({
+              color: "#ffcc33",
+            }),
+          }),
         }),
       });
 
-      var container = document.getElementById("popup");
-      var content = document.getElementById("popup-content");
-      var closer = document.getElementById("popup-closer");
-      console.log(container)
-      console.log(content)
+      this.container = this.$refs.popup;
+      this.content = this.$refs.popup_content;
+      console.log(this.container);
+      // this.closeTooptips()
+
+      // console.log(content);
+      // console.log(this.$refs.popup)
+      // console.log(this.$refs.popup_content)
 
       this.overlay = new Overlay({
-        element: container,
+        element: this.container,
         autoPan: true,
         autoPanAnimation: {
           duration: 250,
@@ -155,16 +207,20 @@ export default {
         // position: [102, 35]
         // positioning: 'bottom-left'
       });
-      console.log(this.overlay)
-      
+      console.log(this.overlay);
 
       this.map = new Map({
-        layers: [raster],
+        layers: [vector, raster],
         target: "map",
+        projection: new Projection("EPSG:3857"),
         view: new View({
           center: [102, 35],
-          zoom: 5,
+          // center: [-11000000, 4600000],
+          // zoom: 4,
+          // center: [110, 35],
+          zoom: 4,
         }),
+
         interactions: new olInteraction.defaults({
           doubleClickZoom: true,
           mouseWheelZoom: true,
@@ -178,33 +234,40 @@ export default {
           ]),
         overlays: [this.overlay],
       });
-      console.log(this.overlay)
+      console.log(this.overlay);
+      // 渲染点击坐标
+      this.map.on("singleclick", (e) => {
+        console.log(e.coordinate);
+        const coordinate = e.coordinate;
 
-      // this.map.on("singleclick", function (e) {
-      //   console.log(e.coordinate);
-      // });
-      closer.onclick = () => {
-        this.overlay.setPosition(undefined);
-        closer.blur();
-        return false;
-      };
-
-      this.map.on("singleclick", evt => {
-        var coordinate = evt.coordinate;
-        this.local = coordinate
-        var hdms = coordinate;
-
-        content.innerHTML = "<p>You clicked here:</p><code>" + hdms + "</code>";
-        this.overlay.setPosition(coordinate);
+        var pixel = this.map.getEventPixel(e.originalEvent);
+        console.log(pixel)
+        this.map.forEachFeatureAtPixel(pixel, (feature) => {
+          //coodinate存放了点击时的坐标信息
+          // var coodinate = e.coordinate;
+          //设置弹出框内容，可以HTML自定义
+          this.content = "<p>你点击的坐标为：" + coordinate + "</p>";
+          //设置overlay的显示位置
+          this.overlay.setPosition(coordinate);
+          //显示overlay
+          // this.map.addOverlay(overlay);
+        });
+        this.content =
+          "<p>You clicked here:</p><code>" + coordinate + "</code>";
+        // this.overlay.setPosition(coordinate);
       });
 
       // this.renderHeatLayer();
-      this.toggleSelectLayer();
       // this.renderlineLayer();
       // this.renderPointLayer();
     },
+    closeTooptips() {
+      this.overlay.setPosition(undefined);
+      console.log("closed");
+      return false;
+    },
     ranging() {
-      Measure.measure(this.map, "length");
+      Measure.measure(this.map, "LineString");
     },
     surveyArea() {
       Measure.measure(this.map, "area");
@@ -214,7 +277,6 @@ export default {
       //渲染热力图层
       if (this.heatmapLayer) this.map.removeLayer(this.heatmapLayer);
 
-      // if (!data.length) return;
       this.heatmapLayer = new HeatmapLayer({
         source: new VectorSource({
           features: new GeoJSON().readFeatures(heatData, {
@@ -228,38 +290,13 @@ export default {
 
       this.map.addLayer(this.heatmapLayer);
     },
-    toggleSelectLayer() {
-      //渲染选中图层
-      const source = new VectorSource({
-        features: new GeoJSON().readFeatures(countriesData, {
-          dataProjection: "EPSG:4326",
-          featureProjection: "EPSG:3857",
-        }),
-      });
-
-      const select = new VectorLayer({
-        source: source,
-      });
-
-      this.draw = new olInteraction.Draw({
-        type: "Polygon",
-        source: source,
-      });
-      this.snap = new olInteraction.Snap({
-        source: source,
-      });
-      this.map.addLayer(select);
-    },
-    beginSelectLayer() {
-      this.map.addInteraction(this.draw);
-      this.map.addInteraction(this.snap);
-    },
-    endSelectLayer() {
-      console.log("aaaaaaaaaa");
-      this.map.removeInteraction(this.draw);
-      this.map.removeInteraction(this.snap);
+    drawPoints(data) {
+      data.array.forEach((element) => {});
     },
 
+    handleCreatePoint(data) {
+      this.$emit("createPoint", data);
+    },
     toggleDrawmapLayer() {
       console.log("执行了吗");
 
@@ -319,12 +356,13 @@ export default {
         const lineLayer = new VectorLayer({
           source: vectorLineSource,
           style: new Style({
-            stroke: new Stroke({ color: "#00FF00", width: 4 }),
+            stroke: new Stroke({ color: "#00FF00", width: 2 }),
           }),
         });
 
         const modify = new olInteraction.Modify({ source: vectorLineSource });
         this.map.addInteraction(modify);
+
         this.map.addLayer(lineLayer);
       });
     },
@@ -357,6 +395,7 @@ export default {
         this.map.addLayer(pointLayer);
       });
     },
+    cheju() {},
   },
 };
 </script>
@@ -383,47 +422,48 @@ export default {
     left: auto;
     background-color: transparent;
   }
-  .ol-popup {
-    position: absolute;
-    background-color: white;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-    padding: 15px;
-    border-radius: 10px;
-    border: 1px solid #cccccc;
-    bottom: 12px;
-    left: -50px;
-    min-width: 280px;
-  }
-  .ol-popup:after,
-  .ol-popup:before {
-    top: 100%;
-    border: solid transparent;
-    content: " ";
-    height: 0;
-    width: 0;
-    position: absolute;
-    pointer-events: none;
-  }
-  .ol-popup:after {
-    border-top-color: white;
-    border-width: 10px;
-    left: 48px;
-    margin-left: -10px;
-  }
-  .ol-popup:before {
-    border-top-color: #cccccc;
-    border-width: 11px;
-    left: 48px;
-    margin-left: -11px;
-  }
-  .ol-popup-closer {
-    text-decoration: none;
-    position: absolute;
-    top: 2px;
-    right: 8px;
-  }
-  .ol-popup-closer:after {
-    content: "✖";
-  }
+}
+
+.ol-popup {
+  position: absolute;
+  background-color: white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  padding: 15px;
+  border-radius: 10px;
+  border: 1px solid #cccccc;
+  bottom: 12px;
+  left: -50px;
+  min-width: 280px;
+}
+.ol-popup:after,
+.ol-popup:before {
+  top: 100%;
+  border: solid transparent;
+  content: " ";
+  height: 0;
+  width: 0;
+  position: absolute;
+  pointer-events: none;
+}
+.ol-popup:after {
+  border-top-color: white;
+  border-width: 10px;
+  left: 48px;
+  margin-left: -10px;
+}
+.ol-popup:before {
+  border-top-color: #cccccc;
+  border-width: 11px;
+  left: 48px;
+  margin-left: -11px;
+}
+.ol-popup-closer {
+  text-decoration: none;
+  position: absolute;
+  top: 2px;
+  right: 8px;
+}
+.ol-popup-closer:after {
+  content: "✖";
 }
 </style>

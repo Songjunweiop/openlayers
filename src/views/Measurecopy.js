@@ -1,20 +1,18 @@
+import "ol/ol.css";
 import Draw from "ol/interaction/Draw";
-import VectorSource from "ol/source/Vector";
-import VectorLayer from "ol/layer/Vector";
-import Point from "ol/geom/Point";
+import Map from "ol/Map";
+import Overlay from "ol/Overlay";
+import View from "ol/View";
+import { Circle as CircleStyle, Fill, Stroke, Style } from "ol/style";
+import { LineString, Polygon } from "ol/geom";
+import { OSM, Vector as VectorSource } from "ol/source";
+import { Tile as TileLayer, Vector as VectorLayer } from "ol/layer";
+import { getArea, getLength } from "ol/sphere";
+import { unByKey } from "ol/Observable";
 import { DoubleClickZoom } from "ol/interaction";
 
-import { unByKey } from "ol/Observable.js";
-import Overlay from "ol/Overlay";
-import { Feature } from "ol";
-import { getLength, getArea, getDistance } from "ol/sphere";
-
-import LineString from "ol/geom/LineString";
-import Polygon from "ol/geom/Polygon";
-
-import { Circle as CircleStyle, Fill, Stroke, Style } from "ol/style.js";
 export default {
-  measure(map, measureType) {
+  measure(map, typeSelect) {
     // 删除默认的双击事件
     const dblClickInteraction = map
       .getInteractions()
@@ -23,48 +21,63 @@ export default {
         return interaction instanceof DoubleClickZoom;
       });
     map.removeInteraction(dblClickInteraction);
-    
+
+    console.log(typeSelect);
+
+    var raster = new TileLayer({
+      source: new OSM(),
+    });
+
     var source = new VectorSource();
 
     var vector = new VectorLayer({
-      id: "lineAndArea",
       source: source,
       style: new Style({
+        fill: new Fill({
+          color: "rgba(255, 255, 255, 0.2)",
+        }),
         stroke: new Stroke({
           color: "#ffcc33",
-          width: 3,
+          width: 2,
+        }),
+        image: new CircleStyle({
+          radius: 7,
+          fill: new Fill({
+            color: "#ffcc33",
+          }),
         }),
       }),
-      zIndex: 16,
     });
+    map.addLayer(raster);
     map.addLayer(vector);
+
     /**
      * Currently drawn feature.
-     * @type {module:ol/Feature~Feature}
+     * @type {import("../src/ol/Feature.js").default}
      */
     var sketch;
 
     /**
      * The help tooltip element.
-     * @type {Element}
+     * @type {HTMLElement}
      */
     var helpTooltipElement;
 
     /**
      * Overlay to show the help messages.
-     * @type {module:ol/Overlay}
+     * @type {Overlay}
      */
     var helpTooltip;
 
     /**
      * The measure tooltip element.
-     * @type {Element}
+     * @type {HTMLElement}
      */
     var measureTooltipElement;
 
     /**
      * Overlay to show the measurement.
-     * @type {module:ol/Overlay}
+     * @type {Overlay}
      */
     var measureTooltip;
 
@@ -72,24 +85,24 @@ export default {
      * Message to show when the user is drawing a polygon.
      * @type {string}
      */
-    var continuePolygonMsg = "";
+    var continuePolygonMsg = "Click to continue drawing the polygon";
 
     /**
      * Message to show when the user is drawing a line.
      * @type {string}
      */
-    var continueLineMsg = "";
+    var continueLineMsg = "Click to continue drawing the line";
 
     /**
      * Handle pointer move.
-     * @param {module:ol/MapBrowserEvent~MapBrowserEvent} evt The event.
+     * @param {import("../src/ol/MapBrowserEvent").default} evt The event.
      */
     var pointerMoveHandler = function (evt) {
       if (evt.dragging) {
         return;
       }
       /** @type {string} */
-      var helpMsg = "请点击开始绘制";
+      var helpMsg = "Click to start drawing";
 
       if (sketch) {
         var geom = sketch.getGeometry();
@@ -106,25 +119,32 @@ export default {
       helpTooltipElement.classList.remove("hidden");
     };
 
+    // map = new Map({
+    //   layers: [raster, vector],
+    //   target: "map",
+    //   view: new View({
+    //     center: [-11000000, 4600000],
+    //     zoom: 15,
+    //   }),
+    // });
+
     map.on("pointermove", pointerMoveHandler);
 
     map.getViewport().addEventListener("mouseout", function () {
       helpTooltipElement.classList.add("hidden");
     });
 
-    var draw;
+    // var typeSelect = document.getElementById("type");
 
+    var draw; // global so we can remove it later
+
+    /**
+     * Format length output.
+     * @param {LineString} line The line.
+     * @return {string} The formatted length.
+     */
     var formatLength = function (line) {
-      // var sourceProj = map.getView().getProjection(); //获取投影坐标系
-      
-      // var geom = line.clone().transform(sourceProj, "EPSG:4326");
       var length = getLength(line);
-      //获取投影坐标系
-      //ol/sphere里有getLength()和getArea()用来测量距离和区域面积，默认的投影坐标系是EPSG:3857, 其中有个options的参数，可以设置投影坐标系
-      // var length = getLength(line, {
-      //   projection: sourceProj /*, radius: 6371008.8*/,
-      // });
-      console.log(length);
       var output;
       if (length > 100) {
         output = Math.round((length / 1000) * 100) / 100 + " " + "km";
@@ -134,12 +154,13 @@ export default {
       return output;
     };
 
+    /**
+     * Format area output.
+     * @param {Polygon} polygon The polygon.
+     * @return {string} Formatted area.
+     */
     var formatArea = function (polygon) {
-      //获取投影坐标系
-      var sourceProj = map.getView().getProjection();
-      var area = getArea(polygon, { projection: sourceProj });
-      //var area = getArea(polygon);
-      //console.info(area)
+      var area = getArea(polygon);
       var output;
       if (area > 10000) {
         output =
@@ -149,19 +170,9 @@ export default {
       }
       return output;
     };
-    var source;
-    // var layer ;
-    // 获取存放feature的vectorlayer层。map初始化的时候可以添加好了
-    for (let layerTmp of map.getLayers().getArray()) {
-      if (layerTmp.get("name") == "feature") {
-        // layer = layerTmp;
-        // layerTmp.setSource(null)
-        source = layerTmp.getSource();
-      }
-    }
 
     function addInteraction() {
-      var type = measureType == "area" ? "Polygon" : "LineString";
+      var type = typeSelect.value == "area" ? "Polygon" : "LineString";
       draw = new Draw({
         source: source,
         type: type,
@@ -186,62 +197,58 @@ export default {
         }),
       });
       map.addInteraction(draw);
+
       createMeasureTooltip();
       createHelpTooltip();
 
       var listener;
-      draw.on(
-        "drawstart",
-        function (evt) {
-          // set sketch
-          sketch = evt.feature;
+      draw.on("drawstart", function (evt) {
+        // set sketch
+        sketch = evt.feature;
 
-          /** @type {module:ol/coordinate~Coordinate|undefined} */
-          var tooltipCoord = evt.coordinate;
+        /** @type {import("../src/ol/coordinate.js").Coordinate|undefined} */
+        var tooltipCoord = evt.coordinate;
 
-          listener = sketch.getGeometry().on("change", function (evt) {
-            var geom = evt.target;
-            var output;
-            if (geom instanceof Polygon) {
-              output = formatArea(geom);
-              tooltipCoord = geom.getInteriorPoint().getCoordinates();
-            } else if (geom instanceof LineString) {
-              output = formatLength(geom);
-              tooltipCoord = geom.getLastCoordinate();
-            }
-            measureTooltipElement.innerHTML = output;
-            measureTooltip.setPosition(tooltipCoord);
-          });
-        },
-        this
-      );
+        listener = sketch.getGeometry().on("change", function (evt) {
+          var geom = evt.target;
+          var output;
+          if (geom instanceof Polygon) {
+            output = formatArea(geom);
+            tooltipCoord = geom.getInteriorPoint().getCoordinates();
+          } else if (geom instanceof LineString) {
+            output = formatLength(geom);
+            tooltipCoord = geom.getLastCoordinate();
+          }
+          measureTooltipElement.innerHTML = output;
+          measureTooltip.setPosition(tooltipCoord);
+        });
+      });
 
-      draw.on(
-        "drawend",
-        function () {
-          measureTooltipElement.className = "tooltip tooltip-static";
-          measureTooltip.setOffset([0, -7]);
-          // unset sketch
-          sketch = null;
-          // unset tooltip so that a new one can be created
-          measureTooltipElement = null;
-          createMeasureTooltip();
-          unByKey(listener);
-          // 单次测距
-          map.un("pointermove", pointerMoveHandler);
-          map.removeInteraction(draw);
-          helpTooltipElement.classList.add("hidden");
-        },
-        this
-      );
+      draw.on("drawend", function () {
+        measureTooltipElement.className = "ol-tooltip ol-tooltip-static";
+        measureTooltip.setOffset([0, -7]);
+        // unset sketch
+        sketch = null;
+        // unset tooltip so that a new one can be created
+        measureTooltipElement = null;
+        createMeasureTooltip();
+        unByKey(listener);
+        // 单次测距
+        map.un("pointermove", pointerMoveHandler);
+        map.removeInteraction(draw);
+        helpTooltipElement.classList.add("hidden");
+      });
     }
 
+    /**
+     * Creates a new help tooltip
+     */
     function createHelpTooltip() {
       if (helpTooltipElement) {
         helpTooltipElement.parentNode.removeChild(helpTooltipElement);
       }
       helpTooltipElement = document.createElement("div");
-      helpTooltipElement.className = "tooltip hidden";
+      helpTooltipElement.className = "ol-tooltip hidden";
       helpTooltip = new Overlay({
         element: helpTooltipElement,
         offset: [15, 0],
@@ -250,12 +257,15 @@ export default {
       map.addOverlay(helpTooltip);
     }
 
+    /**
+     * Creates a new measure tooltip
+     */
     function createMeasureTooltip() {
       if (measureTooltipElement) {
         measureTooltipElement.parentNode.removeChild(measureTooltipElement);
       }
       measureTooltipElement = document.createElement("div");
-      measureTooltipElement.className = "ol-tooltip tooltip-measure";
+      measureTooltipElement.className = "ol-tooltip ol-tooltip-measure";
       measureTooltip = new Overlay({
         element: measureTooltipElement,
         offset: [0, -15],
@@ -263,9 +273,15 @@ export default {
       });
       map.addOverlay(measureTooltip);
     }
-    // 量测调用
-    addInteraction();
 
-    //绘制结束
+    /**
+     * Let user change the geometry type.
+     */
+    // typeSelect.onchange = function () {
+    //   map.removeInteraction(draw);
+    //   addInteraction();
+    // };
+
+    addInteraction();
   },
 };

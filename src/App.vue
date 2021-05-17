@@ -2,7 +2,8 @@
   <div id="app">
     <div id="nav">
       <router-link to="/">Home</router-link> |
-      <router-link to="/CecTileMap">CecTileMap</router-link>
+      <router-link to="/CecTileMap">CecTileMap</router-link> | 
+      <router-link to="/GetLengthTest">GetLengthTest</router-link>
     </div>
     <router-view/>
   </div>
