@@ -84,15 +84,15 @@ import { unByKey } from "ol/Observable";
 import Measure from "./Measure";
 // import Measure from "./Measurecopy";
 //静态资源
-import heatData from "../assets/all_month.json";
-import countriesData from "../assets/countries.json";
+import heatData from "../../assets/all_month.json";
+import countriesData from "../../assets/countries.json";
 
 useGeographic();
 export default {
   name: "CecTileMap",
   props: {
-    tileMapURL: { type: String, default: "http://localhost:8080" },
-    heatData: { type: Object, default: () => ({}) },
+    // tileMapURL: { type: String, default: "http://localhost:8080" },
+    // heatData: { type: Object, default: () => ({}) },
   },
   data() {
     return {
