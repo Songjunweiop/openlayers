@@ -23,6 +23,13 @@ import { OSM, Vector as VectorSource } from "ol/source";
 import { Tile as TileLayer, Vector as VectorLayer } from "ol/layer";
 import { getArea, getLength } from "ol/sphere";
 import { unByKey } from "ol/Observable";
+import {
+  useGeographic,
+  transform,
+  fromLonLat,
+  toLonLat,
+  getTransform,
+} from "ol/proj";
 
 export default {
   name: "CecTileMap",
@@ -98,7 +105,8 @@ export default {
         layers: [raster, vector],
         target: "map",
         view: new View({
-          center: [-11000000, 4600000],
+          // center: [-11000000, 4600000],
+          center: fromLonLat([37.41, 8.82]),
           // center: [110, 35],
           // zoom: 4,
           // center: [102, 35],

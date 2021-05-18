@@ -39,3 +39,22 @@ See [Configuration Reference](https://cli.vuejs.org/config/).
 
     // alert(idea)
   });
+
+  CecTileMap @createPoint={fetch}
+
+
+  console.log(this.map.getLayers())
+  console.log(this.map.getLayers().array_)
+  const aa = this.map.getLayers().array_.map((curitem)=>{
+    // console.log(curitem.values_.title)
+    console.log(curitem.values_)
+    // if()
+  })
+
+  //移动点
+  // const modify = new olInteraction.Modify({ source: vectorPointSource });
+  // this.map.addInteraction(modify);
+  // console.log(modify);
+
+  // const modify = new olInteraction.Modify({ source: vectorLineSource });
+  // this.map.addInteraction(modify);

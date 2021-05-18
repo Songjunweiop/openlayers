@@ -2,7 +2,7 @@
   <div>
     <!-- <el-button @click="beginSelectLayer()">选区</el-button> -->
     <!-- <el-button @click="endSelectLayer()">结束选区</el-button> -->
-    <el-button type="primary" @click="renderHeatLayer()"
+    <!-- <el-button type="primary" @click="renderHeatLayer()"
       >show heatMap</el-button
     >
     <el-button type="primary" @click="renderLineLayer()"
@@ -10,7 +10,7 @@
     >
     <el-button type="primary" @click="renderPointLayer()"
       >show pointMap</el-button
-    >
+    > -->
     <el-button type="primary" @click="ranging()">测距</el-button>
     <el-button type="primary" @click="surveyArea()">测面积</el-button>
     <el-select
@@ -26,6 +26,7 @@
       >
       </el-option>
     </el-select>
+    <!-- point 点击弹框 begin -->
     <div id="popup" class="ol-popup" ref="popup">
       <a
         href="#"
@@ -33,23 +34,60 @@
         class="ol-popup-closer"
         @click="closeTooptips()"
       ></a>
-      <div id="popup-content" ref="popup_content" v-html="content"></div>
+      <div id="popup-content" ref="popup_content">
+        <div id="popup-content">
+          当前点的位置：{{ pointForm.pointCoordinate }}
+          <br />
+          ID：{{ pointForm.id }}
+          <br />
+          描述：{{ pointForm.name }}
+          <br />
+          备注：{{ pointForm.mark }}
+          <br />
+          <el-button
+            type="danger"
+            icon="el-icon-delete"
+            circle
+            @click="handleDeletePoint()"
+          ></el-button>
+        </div>
+      </div>
     </div>
-    <!-- dddddddddddddddddddddddddddddddddddddddddd -->
-    <!-- <div id="popup" class="ol-popup">
-        <a href="#" id="popup-closer" class="ol-popup-closer"></a>
-        <div id="popup-content"></div>
-    </div> -->
+    <!-- point 点击弹框 end -->
+
+    <!-- addPoint 点击弹框 begin -->
+    <div id="popup" class="ol-popup" ref="add_popup">
+      <a
+        href="#"
+        id="popup-closer"
+        class="ol-popup-closer"
+        @click="closeTooptips()"
+      ></a>
+      <div id="popup-content" ref="add_popup_content">
+        <div id="popup-content">
+          当前点的位置：{{ addPointForm.pointCoordinate }}
+          <el-form ref="form" :model="addPointForm" label-width="80px">
+            <el-form-item label="描述">
+              <el-input v-model="addPointForm.name"></el-input>
+            </el-form-item>
+            <el-form-item label="备注">
+              <el-input v-model="addPointForm.mark"></el-input>
+            </el-form-item>
+
+            <el-form-item>
+              <el-button type="primary" @click="handleCreatePoint()"
+                >立即创建</el-button
+              >
+              <el-button @click="closeTooptips()">取消</el-button>
+            </el-form-item>
+          </el-form>
+        </div>
+      </div>
+    </div>
+    <!-- addPoint 点击弹框 end -->
+
+    <!-- 地图 -->
     <div id="map" style="width: 99vw; height: 90vh;"></div>
-    <!-- <div id="map" class="map"></div>
-    <form class="form-inline">
-      <label for="type">Measurement type &nbsp;</label>
-      <select id="type">
-        <option value="length">Length (LineString)</option>
-        <option value="area">Area (Polygon)</option>
-      </select>
-    </form> -->
-    CecTileMap @createPoint={fetch}
   </div>
 </template>
 
@@ -84,7 +122,7 @@ import { unByKey } from "ol/Observable";
 import Measure from "./Measure";
 // import Measure from "./Measurecopy";
 //静态资源
-import heatData from "../../assets/all_month.json";
+
 import countriesData from "../../assets/countries.json";
 
 useGeographic();
@@ -92,14 +130,18 @@ export default {
   name: "CecTileMap",
   props: {
     // tileMapURL: { type: String, default: "http://localhost:8080" },
-    // heatData: { type: Object, default: () => ({}) },
+    heatData: { type: Object, default: () => ({}) },
+    pointsData: { type: Array, default: []}
   },
   data() {
     return {
       map: null,
       container: "",
       content: "",
+      addContainer: "",
+      addContent: "",
       heatmapLayer: null,
+      drawmapLayer:null,
       draw: null,
       snap: null,
       options: [
@@ -124,13 +166,7 @@ export default {
           label: "No do",
         },
       ],
-      points: [
-        [100, 40],
-        [110, 35],
-        [102, 25],
-        [108, 30],
-        [106, 36],
-      ],
+      
       pointArys: [
         [
           [104.057, 30.639],
@@ -156,10 +192,25 @@ export default {
       selectedValue: "None",
       aaa: [],
       overlay: null,
+      addOverlay: null,
       local: null,
+
+      pointForm: {
+        id: "",
+        name: "",
+        mark: "",
+        pointCoordinate: "",
+      },
+      addPointForm: {
+        id: "",
+        name: "",
+        mark: "",
+        pointCoordinate: "",
+      },
     };
   },
   watch: {},
+  created(){},
   mounted() {
     this.initMap();
   },
@@ -188,41 +239,45 @@ export default {
           }),
         }),
       });
-
+      // tooptips元素
       this.container = this.$refs.popup;
-      this.content = this.$refs.popup_content;
-      console.log(this.container);
-      // this.closeTooptips()
+      this.content = this.$refs.popup_content.children;
+      // 添加点form元素
+      this.addContainer = this.$refs.add_popup;
+      this.addContent = this.$refs.add_popup_content.children;
 
-      // console.log(content);
-      // console.log(this.$refs.popup)
-      // console.log(this.$refs.popup_content)
 
-      this.overlay = new Overlay({
+      this.infoOverlay = new Overlay({
         element: this.container,
         autoPan: true,
         autoPanAnimation: {
           duration: 250,
         },
         // position: [102, 35]
-        // positioning: 'bottom-left'
       });
-      console.log(this.overlay);
+      this.addOverlay = new Overlay({
+        element: this.addContainer,
+        autoPan: true,
+        autoPanAnimation: {
+          duration: 250,
+        },
+        // position: [102, 35]
+      });
 
       this.map = new Map({
         layers: [vector, raster],
         target: "map",
-        projection: new Projection("EPSG:3857"),
         view: new View({
+          // projection: "EPSG:4326",
+          // projection: "EPSG:3857",
           center: [102, 35],
           // center: [-11000000, 4600000],
           // zoom: 4,
           // center: [110, 35],
           zoom: 4,
         }),
-
         interactions: new olInteraction.defaults({
-          doubleClickZoom: true,
+          doubleClickZoom: false,
           mouseWheelZoom: true,
         }).extend([new olInteraction.DragRotateAndZoom()]), //旋转
         controls: olControl
@@ -232,38 +287,17 @@ export default {
             new olControl.ZoomSlider(),
             new olControl.MousePosition(),
           ]),
-        overlays: [this.overlay],
+        overlays: [this.infoOverlay, this.addOverlay],
       });
-      console.log(this.overlay);
-      // 渲染点击坐标
-      this.map.on("singleclick", (e) => {
-        console.log(e.coordinate);
-        const coordinate = e.coordinate;
-
-        var pixel = this.map.getEventPixel(e.originalEvent);
-        console.log(pixel)
-        this.map.forEachFeatureAtPixel(pixel, (feature) => {
-          //coodinate存放了点击时的坐标信息
-          // var coodinate = e.coordinate;
-          //设置弹出框内容，可以HTML自定义
-          this.content = "<p>你点击的坐标为：" + coordinate + "</p>";
-          //设置overlay的显示位置
-          this.overlay.setPosition(coordinate);
-          //显示overlay
-          // this.map.addOverlay(overlay);
-        });
-        this.content =
-          "<p>You clicked here:</p><code>" + coordinate + "</code>";
-        // this.overlay.setPosition(coordinate);
-      });
+      console.log(this.map.getLayers())
 
       // this.renderHeatLayer();
       // this.renderlineLayer();
       // this.renderPointLayer();
     },
     closeTooptips() {
-      this.overlay.setPosition(undefined);
-      console.log("closed");
+      this.infoOverlay.setPosition(undefined);
+      this.addOverlay.setPosition(undefined);
       return false;
     },
     ranging() {
@@ -279,7 +313,7 @@ export default {
 
       this.heatmapLayer = new HeatmapLayer({
         source: new VectorSource({
-          features: new GeoJSON().readFeatures(heatData, {
+          features: new GeoJSON().readFeatures(this.heatData, {
             dataProjection: "EPSG:4326",
             featureProjection: "EPSG:3857",
           }),
@@ -293,15 +327,41 @@ export default {
     drawPoints(data) {
       data.array.forEach((element) => {});
     },
-
-    handleCreatePoint(data) {
-      this.$emit("createPoint", data);
+    // 添加点
+    handleCreatePoint() {
+      console.log(this.addPointForm);
+      this.$emit("createPoint", this.addPointForm);
+      this.closeTooptips();
+      this.renderPointLayer()
     },
+    // 删除点
+    handleDeletePoint() {
+      console.log(this.pointForm);
+      this.$emit("deletePoint", this.pointForm.id);
+      this.closeTooptips();
+    },
+    // 添加线
+    handleCreateLine() {
+      console.log(this.addLineForm);
+      this.$emit("createLine", this.addLineForm);
+      this.closeTooptips();
+      // this.renderPointLayer()
+    },
+    // 删除线
+    handleDeleteLine() {
+      console.log(this.pointForm);
+      this.$emit("deletePoint", this.pointForm.id);
+      this.closeTooptips();
+    },
+
     toggleDrawmapLayer() {
+      if(this.drawmapLayer) this.map.removeLayer(this.drawmapLayer)
+      
       console.log("执行了吗");
 
+      this.map.removeEventListener();
       const source = new VectorSource({ wrapX: false });
-      const drawmapLayer = new VectorLayer({
+      this.drawmapLayer = new VectorLayer({
         source: source,
       });
 
@@ -314,31 +374,13 @@ export default {
           source: source,
           type: this.selectedValue,
         });
-
-        this.draw.on(
-          "drawend",
-          function (e) {
-            console.dir(e);
-            console.log(e.target.downPx_);
-
-            // helpTooltip = new Overlay({
-            //   element: e.target.downPx_,
-            //   offset: [15, 0],
-            //   positioning: "center-left",
-            // });
-            // this.map.addOverlay(helpTooltip);
-          },
-          this
-        );
-
-        const modify = new olInteraction.Modify({ source: source });
-        this.map.addInteraction(modify);
-
         this.map.addInteraction(this.draw);
       } else {
         this.map.removeInteraction(this.draw);
+        // this.renderPointLayer();
       }
-      this.map.addLayer(drawmapLayer);
+      this.setOverlayPosition();
+      this.map.addLayer(this.drawmapLayer);
     },
 
     renderLineLayer() {
@@ -360,26 +402,32 @@ export default {
           }),
         });
 
-        const modify = new olInteraction.Modify({ source: vectorLineSource });
-        this.map.addInteraction(modify);
-
         this.map.addLayer(lineLayer);
       });
     },
 
     renderPointLayer() {
-      this.points.map((curpoint) => {
+      console.log("渲染点了吗");
+      this.pointsData.map((curpoint) => {
         const pointFeatures = new Feature({
-          geometry: new Point(curpoint),
+          geometry: new Point(curpoint.coordinate),
         });
+        pointFeatures.setProperties({
+          id: curpoint.id,
+          name: curpoint.name,
+          location: curpoint.mark,
+        });
+
         const vectorPointSource = new VectorSource({
           features: [pointFeatures],
         });
-        console.log(
-          vectorPointSource.getFeatures()[0].getGeometry().getCoordinates()
-        );
+        // console.log(pointFeatures.getGeometry());
+        // console.log(
+        //   pointFeatures.getGeometry().getCoordinates() //渲染点坐标
+        // );
 
         const pointLayer = new VectorLayer({
+          title: 'mypointLayer',
           source: vectorPointSource,
           style: new Style({
             image: new Circle({
@@ -389,13 +437,43 @@ export default {
             }),
           }),
         });
-        const modify = new olInteraction.Modify({ source: vectorPointSource });
-        this.map.addInteraction(modify);
-        console.log(modify);
         this.map.addLayer(pointLayer);
       });
+      this.setOverlayPosition();
     },
-    cheju() {},
+    // map点击事件注册
+    setOverlayPosition() {
+      this.map.on("singleclick", (e) => {
+        console.log(this.pointForm)
+        console.log("dianlema ");
+
+        const pixel = this.map.getEventPixel(e.originalEvent);
+        console.log(pixel);
+
+        this.map.forEachFeatureAtPixel(pixel, (feature) => {
+          // console.log(feature.getGeometry());
+          console.log(feature.getProperties());
+
+          // console.log(feature.getGeometry().getCoordinates());   //渲染出来的point的精确坐标，而不是点击的坐标
+          const localPoint = feature.getGeometry().getCoordinates();
+
+          if (feature.getProperties().id) {
+            this.pointForm.id = feature.getProperties().id;
+            this.pointForm.name = feature.getProperties().name;
+            this.pointForm.mark = feature.getProperties().location;
+            this.pointForm.pointCoordinate = localPoint;
+            this.addOverlay.setPosition(undefined);
+            this.infoOverlay.setPosition(localPoint);
+          } else {
+            this.addPointForm.pointCoordinate = localPoint;
+            this.infoOverlay.setPosition(undefined);
+            this.addOverlay.setPosition(localPoint);
+          }
+
+          console.log(this.infoOverlay.getPosition());
+        });
+      });
+    },
   },
 };
 </script>
