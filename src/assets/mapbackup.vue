@@ -8,7 +8,7 @@
       @change="toggleDrawmapLayer()"
     >
       <el-option
-        v-for="item in drawOptions"
+        v-for="item in options"
         :key="item.value"
         :label="item.label"
         :value="item.value"
@@ -196,7 +196,7 @@ export default {
       drawmapLayer: null,
       draw: null,
       snap: null,
-      drawOptions: [
+      options: [
         {
           value: "Point",
           label: "Point",
@@ -218,6 +218,8 @@ export default {
       overlay: null,
       infoOverlay: null,
       addOverlay: null,
+      // addLineOverlay: null,
+      // addPolygonOverlay: null,
       local: null,
       isDraw: false,
       targetFrom: {
@@ -232,6 +234,18 @@ export default {
         mark: "",
         targetCoordinate: [],
       },
+      // addLineForm: {
+      //   id: "",
+      //   name: "",
+      //   mark: "",
+      //   lineCoordinate: [],
+      // },
+      // addPolygonForm: {
+      //   id: "",
+      //   name: "",
+      //   mark: "",
+      //   polygonCoordinate: [],
+      // },
     };
   },
   watch: {},
@@ -268,8 +282,10 @@ export default {
       // 点击点弹出tooptips元素
       this.infoContainer = this.$refs.popup;
 
-      // 获取创建点、线、面弹出的form元素
+      // 创建点、线、面弹出form元素
       this.addContainer = this.$refs.add_popup;
+      this.addLineContainer = this.$refs.add_line_popup;
+      this.addPolygonContainer = this.$refs.add_polygon_popup;
 
       this.infoOverlay = new Overlay({
         element: this.infoContainer,
@@ -285,6 +301,20 @@ export default {
           duration: 250,
         },
       });
+      // this.addLineOverlay = new Overlay({
+      //   element: this.addLineContainer,
+      //   autoPan: false,
+      //   autoPanAnimation: {
+      //     duration: 250,
+      //   },
+      // });
+      // this.addPolygonOverlay = new Overlay({
+      //   element: this.addPolygonContainer,
+      //   autoPan: false,
+      //   autoPanAnimation: {
+      //     duration: 250,
+      //   },
+      // });
 
       this.map = new Map({
         layers: [vector, raster],
@@ -309,7 +339,12 @@ export default {
             new olControl.ZoomSlider(),
             new olControl.MousePosition(),
           ]),
-        overlays: [this.infoOverlay, this.addOverlay],
+        overlays: [
+          this.infoOverlay,
+          this.addOverlay,
+          // this.addLineOverlay,
+          // this.addPolygonOverlay,
+        ],
       });
       console.log(this.map.getLayers());
     },
@@ -318,6 +353,8 @@ export default {
     closeTooptips() {
       this.infoOverlay.setPosition(undefined);
       this.addOverlay.setPosition(undefined);
+      // this.addLineOverlay.setPosition(undefined);
+      // this.addPolygonOverlay.setPosition(undefined);
       return false;
     },
 
@@ -330,7 +367,7 @@ export default {
       Measure.measure(this.map, "area");
     },
 
-    // 添加点、线、面
+    // 添加点
     handleCreatePoint() {
       console.log(this.addForm);
       console.log(this.selectedDrawValue);
@@ -347,7 +384,25 @@ export default {
         this.$emit("createPolygon", this.addForm);
         this.renderPolygonLayer();
       }
+
       this.closeTooptips();
+    },
+
+    // 添加线
+    handleCreateLine() {
+      console.log(this.addLineForm);
+      this.$emit("createLine", this.addLineForm);
+      this.closeTooptips();
+      this.renderLineLayer();
+    },
+
+    // 添加面
+    handleCreatePolygon() {
+      console.log(this.addPolygonForm);
+      console.log("添加了面了吗");
+      this.$emit("createPolygon", this.addPolygonForm);
+      this.closeTooptips();
+      this.renderPolygonLayer();
     },
 
     // 删除点、线、面
@@ -375,6 +430,7 @@ export default {
       if (this.drawmapLayer) this.map.removeLayer(this.drawmapLayer);
       console.log("执行了吗");
 
+      // this.map.removeEventListener();
       const source = new VectorSource({ wrapX: false });
       this.drawmapLayer = new VectorLayer({
         source: source,
@@ -404,22 +460,29 @@ export default {
         if (this.selectedDrawValue === "Point") {
           this.addForm.targetCoordinate = e.target.sketchCoords_;
           this.infoOverlay.setPosition(undefined);
+          // this.addPolygonOverlay.setPosition(undefined);
+          // this.addLineOverlay.setPosition(undefined);
           this.addOverlay.setPosition(e.target.sketchCoords_);
         } else if (this.selectedDrawValue === "LineString") {
           const lineCoordinate = e.target.sketchCoords_;
+          // this.addLineForm.lineCoordinate = lineCoordinate;
           this.addForm.targetCoordinate = lineCoordinate;
           const finishCoordinate = lineCoordinate[1];
           // console.log(finishCoordinate);
           this.infoOverlay.setPosition(undefined);
           this.addOverlay.setPosition(finishCoordinate);
+          // this.addPolygonOverlay.setPosition(undefined);
+          // this.addLineOverlay.setPosition(finishCoordinate);
         } else if (this.selectedDrawValue === "Polygon") {
           this.addForm.targetCoordinate = e.target.sketchCoords_[0];
           const finishCoordinate = e.target.sketchCoords_[0][0];
           this.infoOverlay.setPosition(undefined);
           this.addOverlay.setPosition(finishCoordinate);
+          // this.addLineOverlay.setPosition(undefined);
+          // this.addPolygonOverlay.setPosition(finishCoordinate);
         }
       });
-      this.setTooptipsPosition();
+      this.setOverlayPosition();
       this.map.addLayer(this.drawmapLayer);
     },
 
@@ -440,8 +503,6 @@ export default {
 
       this.map.addLayer(this.heatmapLayer);
     },
-
-    // 关闭热力图
     handleCloseHeatLayer() {
       this.map.removeLayer(this.heatmapLayer);
     },
@@ -460,6 +521,9 @@ export default {
         const vectorLineSource = new VectorSource({
           features: [lineFeatures],
         });
+        // console.log(
+        //   vectorLineSource.getFeatures()[0].getGeometry().getCoordinates()
+        // );
 
         const lineLayer = new VectorLayer({
           source: vectorLineSource,
@@ -469,7 +533,7 @@ export default {
         });
         this.map.addLayer(lineLayer);
       });
-      this.setTooptipsPosition();
+      this.setOverlayPosition();
     },
 
     // 渲染点图
@@ -488,6 +552,10 @@ export default {
         const vectorPointSource = new VectorSource({
           features: [pointFeatures],
         });
+        // console.log(pointFeatures.getGeometry());
+        // console.log(
+        //   pointFeatures.getGeometry().getCoordinates() //渲染点坐标
+        // );
 
         const pointLayer = new VectorLayer({
           title: "mypointLayer",
@@ -503,7 +571,7 @@ export default {
         });
         this.map.addLayer(pointLayer);
       });
-      this.setTooptipsPosition();
+      this.setOverlayPosition();
     },
 
     // 渲染多边形图
@@ -532,14 +600,16 @@ export default {
         });
         this.map.addLayer(polygonLayer);
       });
-      this.setTooptipsPosition();
+      this.setOverlayPosition();
     },
 
     // map点击事件注册
-    setTooptipsPosition() {
+    setOverlayPosition() {
       this.map.on("singleclick", (e) => {
         if (!this.isDraw) {
-          // console.log(e.coordinate);   // 鼠标点击的坐标
+          // console.log(e.coordinate);
+          // this.addOverlay.setPosition(undefined);
+          // this.infoOverlay.setPosition(undefined);
           console.log(this.targetFrom);
           console.log("触发了点击事件");
 

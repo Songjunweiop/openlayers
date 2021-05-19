@@ -58,3 +58,10 @@ See [Configuration Reference](https://cli.vuejs.org/config/).
 
   // const modify = new olInteraction.Modify({ source: vectorLineSource });
   // this.map.addInteraction(modify);
+
+
+//已知点的坐标的坐标
+// console.log(pointFeatures.getGeometry());
+// console.log(
+//   pointFeatures.getGeometry().getCoordinates() 
+// );
