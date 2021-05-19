@@ -45,6 +45,10 @@ export default {
     this.getPointList();
     this.getLineList();
     this.getpolygonList();
+    
+  },
+  mounted(){
+    this.showPointMap()
   },
   methods: {
     // 获取热力图数据

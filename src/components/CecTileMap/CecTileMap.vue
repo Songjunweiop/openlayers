@@ -16,15 +16,14 @@
       </el-option>
     </el-select>
     <!--  点击弹框 begin -->
-    <div id="popup" class="ol-popup" ref="popup">
+    <div class="ol-popup" ref="popup">
       <a
         href="#"
         id="popup-closer"
         class="ol-popup-closer"
         @click="closeTooptips()"
       ></a>
-      <div id="popup-content" ref="popup_content">
-        <div id="popup-content">
+      <div class="popup-content" ref="popup_content">
           目标位置：{{ targetFrom.coordinate }}
           <br />
           ID：{{ targetFrom.id }}
@@ -39,21 +38,19 @@
             circle
             @click="handleDeletePoint()"
           ></el-button>
-        </div>
       </div>
     </div>
     <!--  点击弹框 end -->
 
     <!-- addPoint 点击弹框 begin -->
-    <div id="popup" class="ol-popup" ref="add_popup">
+    <div class="ol-popup" ref="add_popup">
       <a
         href="#"
         id="popup-closer"
         class="ol-popup-closer"
         @click="closeTooptips()"
       ></a>
-      <div id="popup-content" ref="add_popup_content">
-        <div id="popup-content">
+      <div ref="add_popup_content">
           当前目标位置：{{ addForm.targetCoordinate }}
           <el-form ref="form" :model="addForm" label-width="80px">
             <el-form-item label="描述">
@@ -64,77 +61,14 @@
             </el-form-item>
 
             <el-form-item>
-              <el-button type="primary" @click="handleCreatePoint()"
+              <el-button plain type="primary" @click="handleCreatePoint()"
                 >创建</el-button
               >
-              <el-button @click="closeTooptips()">取消</el-button>
+              <el-button plain @click="closeTooptips()">取消</el-button>
             </el-form-item>
           </el-form>
-        </div>
       </div>
     </div>
-    <!-- addPoint 点击弹框 end -->
-
-    <!-- addLine 点击弹框 begin -->
-    <!-- <div id="popup" class="ol-popup" ref="add_line_popup">
-      <a
-        href="#"
-        id="popup-closer"
-        class="ol-popup-closer"
-        @click="closeTooptips()"
-      ></a>
-      <div id="popup-content" ref="add_line_popup_content">
-        <div id="popup-content">
-          当前点的位置：{{ addLineForm.lineCoordinate }}
-          <el-form ref="form" :model="addLineForm" label-width="80px">
-            <el-form-item label="描述">
-              <el-input v-model="addLineForm.name"></el-input>
-            </el-form-item>
-            <el-form-item label="备注">
-              <el-input v-model="addLineForm.mark"></el-input>
-            </el-form-item>
-
-            <el-form-item>
-              <el-button type="primary" @click="handleCreateLine()"
-                >立即创建</el-button
-              >
-              <el-button @click="closeTooptips()">取消</el-button>
-            </el-form-item>
-          </el-form>
-        </div>
-      </div>
-    </div> -->
-    <!-- addLine 点击弹框 end -->
-
-    <!-- addPolygon 点击弹框 begin -->
-    <!-- <div id="popup" class="ol-popup" ref="add_polygon_popup">
-      <a
-        href="#"
-        id="popup-closer"
-        class="ol-popup-closer"
-        @click="closeTooptips()"
-      ></a>
-      <div id="popup-content" ref="add_polygon_popup_content">
-        <div id="popup-content">
-          当前坐标位置：{{ addPolygonForm.polygonCoordinate }}
-          <el-form ref="form" :model="addForm" label-width="80px">
-            <el-form-item label="描述">
-              <el-input v-model="addPolygonForm.name"></el-input>
-            </el-form-item>
-            <el-form-item label="备注">
-              <el-input v-model="addPolygonForm.mark"></el-input>
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="handleCreatePolygon()"
-                >立即创建</el-button
-              >
-              <el-button @click="closeTooptips()">取消</el-button>
-            </el-form-item>
-          </el-form>
-        </div>
-      </div>
-    </div> -->
-    <!-- addPoint 点击弹框 end -->
 
     <!-- 地图 -->
     <div id="map" style="width: 99vw; height: 90vh;"></div>
@@ -382,7 +316,7 @@ export default {
 
       // 选择标记类型
       if (this.selectedDrawValue !== "None") {
-        this.map.removeInteraction(this.draw); // 清除之前的绘制图形
+        this.map.removeInteraction(this.draw);
 
         this.draw = new olInteraction.Draw({
           source: source,
@@ -541,7 +475,7 @@ export default {
         if (!this.isDraw) {
           // console.log(e.coordinate);   // 鼠标点击的坐标
           console.log(this.targetFrom);
-          console.log("触发了点击事件");
+          // console.log("触发了点击事件");
 
           const pixel = this.map.getEventPixel(e.originalEvent);
           console.log(pixel);
@@ -600,14 +534,14 @@ export default {
 
 .ol-popup {
   position: absolute;
-  background-color: white;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  background-color: rgb(0, 0, 0);
+  font-size: 14px;
+  color: white;
   padding: 15px;
   border-radius: 10px;
-  border: 1px solid #cccccc;
   bottom: 12px;
   left: -50px;
-  min-width: 280px;
+  min-width: 260px;
 }
 .ol-popup:after,
 .ol-popup:before {
@@ -620,13 +554,13 @@ export default {
   pointer-events: none;
 }
 .ol-popup:after {
-  border-top-color: white;
+  border-top-color: rgb(0, 0, 0);
   border-width: 10px;
   left: 48px;
   margin-left: -10px;
 }
 .ol-popup:before {
-  border-top-color: #cccccc;
+  // border-top-color: #cccccc;
   border-width: 11px;
   left: 48px;
   margin-left: -11px;
@@ -636,8 +570,12 @@ export default {
   position: absolute;
   top: 2px;
   right: 8px;
+  color: white;
 }
 .ol-popup-closer:after {
   content: "✖";
+}
+.popup-content{
+  
 }
 </style>
