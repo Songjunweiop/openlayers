@@ -24,20 +24,41 @@
         @click="closeTooptips()"
       ></a>
       <div class="popup-content" ref="popup_content">
-          目标位置：{{ targetFrom.coordinate }}
-          <br />
-          ID：{{ targetFrom.id }}
-          <br />
-          描述：{{ targetFrom.name }}
-          <br />
-          备注：{{ targetFrom.mark }}
-          <br />
-          <el-button
-            type="danger"
-            icon="el-icon-delete"
-            circle
-            @click="handleDeletePoint()"
-          ></el-button>
+        <p>目标位置：{{ targetFrom.coordinate }}</p>
+        <!-- <p>ID：{{ targetFrom.id }}</p>
+        <p>描述：{{ targetFrom.name }}</p>
+        <p>备注：{{ targetFrom.mark }}</p>
+        <el-button
+          type="danger"
+          icon="el-icon-delete"
+          @click="handleDelete()"
+          size="mini"
+        ></el-button> -->
+        <el-form ref="form" :model="targetFrom" label-width="80px">
+          <!-- <el-form-item label="描述">
+            <el-input v-model="targetFrom.name"></el-input>
+          </el-form-item> -->
+          <el-form-item label="标记">
+            <el-input v-model="targetFrom.mark"></el-input>
+          </el-form-item>
+
+          <el-form-item>
+            <el-button
+              plain
+              size="mini"
+              type="primary"
+              @click="handleUpdate('update')"
+              >保存</el-button
+            >
+            <el-button
+              plain
+              size="mini"
+              @click="handleDelete('delete')"
+              type="danger"
+              >删除</el-button
+            >
+          </el-form-item>
+        </el-form>
       </div>
     </div>
     <!--  点击弹框 end -->
@@ -51,22 +72,29 @@
         @click="closeTooptips()"
       ></a>
       <div ref="add_popup_content">
-          当前目标位置：{{ addForm.targetCoordinate }}
-          <el-form ref="form" :model="addForm" label-width="80px">
-            <el-form-item label="描述">
-              <el-input v-model="addForm.name"></el-input>
-            </el-form-item>
-            <el-form-item label="备注">
-              <el-input v-model="addForm.mark"></el-input>
-            </el-form-item>
+        <p>当前目标位置：{{ addForm.targetCoordinate }}</p>
 
-            <el-form-item>
-              <el-button plain type="primary" @click="handleCreatePoint()"
-                >创建</el-button
-              >
-              <el-button plain @click="closeTooptips()">取消</el-button>
-            </el-form-item>
-          </el-form>
+        <el-form ref="form" :model="addForm" label-width="80px">
+          <el-form-item label="描述">
+            <el-input v-model="addForm.name"></el-input>
+          </el-form-item>
+          <el-form-item label="备注">
+            <el-input v-model="addForm.mark"></el-input>
+          </el-form-item>
+
+          <el-form-item>
+            <el-button
+              plain
+              size="mini"
+              type="primary"
+              @click="handleCreate()"
+              >创建</el-button
+            >
+            <el-button plain size="mini" @click="closeTooptips()"
+              >取消</el-button
+            >
+          </el-form-item>
+        </el-form>
       </div>
     </div>
 
@@ -108,12 +136,11 @@ import Measure from "./Measure";
 //静态资源
 
 import countriesData from "../../assets/countries.json";
-
+import lodash from "lodash";
 useGeographic();
 export default {
   name: "CecTileMap",
   props: {
-    // tileMapURL: { type: String, default: "http://localhost:8080" },
     heatData: { type: Object, default: () => ({}) },
     pointsData: { type: Array, default: [] },
     lineData: { type: Array, default: [] },
@@ -205,6 +232,7 @@ export default {
       // 获取创建点、线、面弹出的form元素
       this.addContainer = this.$refs.add_popup;
 
+      // 显示目标信息的弹框层
       this.infoOverlay = new Overlay({
         element: this.infoContainer,
         autoPan: false,
@@ -212,6 +240,7 @@ export default {
           duration: 250,
         },
       });
+      // 显示添加绘制目标的弹框层
       this.addOverlay = new Overlay({
         element: this.addContainer,
         autoPan: false,
@@ -221,7 +250,7 @@ export default {
       });
 
       this.map = new Map({
-        layers: [vector, raster],
+        layers: [raster],
         target: "map",
         view: new View({
           // projection: "EPSG:4326",
@@ -245,6 +274,7 @@ export default {
           ]),
         overlays: [this.infoOverlay, this.addOverlay],
       });
+      this.setPointerMove();
       console.log(this.map.getLayers());
     },
 
@@ -265,40 +295,61 @@ export default {
     },
 
     // 添加点、线、面
-    handleCreatePoint() {
+    handleCreate() {
       console.log(this.addForm);
       console.log(this.selectedDrawValue);
       if (this.selectedDrawValue === "Point") {
         console.log("这里是创建点");
-        this.$emit("createPoint", this.addForm);
+        this.$emit("pointChange", 'create', this.addForm);
         this.renderPointLayer();
       } else if (this.selectedDrawValue === "LineString") {
         console.log("这里创建的线");
-        this.$emit("createLine", this.addForm);
+        this.$emit("lineChange", 'create', this.addForm);
         this.renderLineLayer();
       } else if (this.selectedDrawValue === "Polygon") {
         console.log("这里创建的面");
-        this.$emit("createPolygon", this.addForm);
+        this.$emit("polygonChange", 'create', this.addForm);
         this.renderPolygonLayer();
       }
       this.closeTooptips();
     },
 
+    // 更新点、线、面
+    handleUpdate(){
+      
+    },
+
     // 删除点、线、面
-    handleDeletePoint() {
+    handleDelete() {
       console.log(this.targetFrom);
       const isDeep = (arr) => arr.some((item) => item instanceof Array);
       const deletetype = isDeep(this.targetFrom.coordinate);
-      console.log(deletetype);
+      const allLayers = this.map.getLayers().array_;
+      // console.log(deletetype);
       if (!deletetype) {
         console.log("我删除的是点");
-        this.$emit("deletePoint", this.targetFrom.id);
+        allLayers.map((curLayer) => {
+          if (curLayer.values_.pointLayerId === this.targetFrom.id) {
+            this.map.removeLayer(curLayer);
+          }
+        });
+        this.$emit("pointChange", "delete", this.targetFrom.id);
       } else if (deletetype && this.targetFrom.coordinate.length !== 1) {
         console.log("我删除的是线");
-        this.$emit("deleteLine", this.targetFrom.id);
+        allLayers.map((curLayer) => {
+          if (curLayer.values_.lineLayerId === this.targetFrom.id) {
+            this.map.removeLayer(curLayer);
+          }
+        });
+        this.$emit("lineChange", "delete", this.targetFrom.id);
       } else {
         console.log("我删除的是面");
-        this.$emit("deletePolygon", this.targetFrom.id);
+        allLayers.map((curLayer) => {
+          if (curLayer.values_.polygonLayerId === this.targetFrom.id) {
+            this.map.removeLayer(curLayer);
+          }
+        });
+        this.$emit("polygonChange", "delete", this.targetFrom.id);
       }
 
       this.closeTooptips();
@@ -334,33 +385,31 @@ export default {
         this.selectedDrawValue = e.target.type_;
       });
       this.draw.on("drawend", (e) => {
+        this.infoOverlay.setPosition(undefined);
+        let finishCoordinate;
         console.log(e.target.sketchCoords_);
         if (this.selectedDrawValue === "Point") {
           this.addForm.targetCoordinate = e.target.sketchCoords_;
-          this.infoOverlay.setPosition(undefined);
-          this.addOverlay.setPosition(e.target.sketchCoords_);
+          finishCoordinate = e.target.sketchCoords_;
         } else if (this.selectedDrawValue === "LineString") {
           const lineCoordinate = e.target.sketchCoords_;
           this.addForm.targetCoordinate = lineCoordinate;
-          const finishCoordinate = lineCoordinate[1];
-          // console.log(finishCoordinate);
-          this.infoOverlay.setPosition(undefined);
-          this.addOverlay.setPosition(finishCoordinate);
+          finishCoordinate = lineCoordinate[1];
         } else if (this.selectedDrawValue === "Polygon") {
           this.addForm.targetCoordinate = e.target.sketchCoords_[0];
-          const finishCoordinate = e.target.sketchCoords_[0][0];
-          this.infoOverlay.setPosition(undefined);
-          this.addOverlay.setPosition(finishCoordinate);
+          finishCoordinate = e.target.sketchCoords_[0][0];
         }
+        this.addOverlay.setPosition(finishCoordinate);
       });
-      this.setTooptipsPosition();
+
+      // this.setTooptipsPosition();
       this.map.addLayer(this.drawmapLayer);
     },
 
     //渲染热力图
     renderHeatLayer() {
       if (this.heatmapLayer) this.map.removeLayer(this.heatmapLayer);
-
+      console.log(this.map.getLayers());
       this.heatmapLayer = new HeatmapLayer({
         source: new VectorSource({
           features: new GeoJSON().readFeatures(this.heatData, {
@@ -396,6 +445,7 @@ export default {
         });
 
         const lineLayer = new VectorLayer({
+          lineLayerId: curline.id,
           source: vectorLineSource,
           style: new Style({
             stroke: new Stroke({ color: "#00FF00", width: 2 }),
@@ -408,6 +458,7 @@ export default {
 
     // 渲染点图
     renderPointLayer() {
+      // this.clearAllPointLayers()
       console.log("渲染点了吗");
       this.pointsData.map((curpoint) => {
         const pointFeatures = new Feature({
@@ -418,15 +469,19 @@ export default {
           name: curpoint.name,
           location: curpoint.mark,
         });
+        pointFeatures.on("singleClick", (e) => {
+          console.log(e);
+        });
 
         const vectorPointSource = new VectorSource({
           features: [pointFeatures],
         });
 
         const pointLayer = new VectorLayer({
+          pointLayerId: curpoint.id,
           title: "mypointLayer",
           source: vectorPointSource,
-          zindex: 99,
+          // zindex: 9999999,
           style: new Style({
             image: new Circle({
               radius: 5,
@@ -435,9 +490,39 @@ export default {
             }),
           }),
         });
+        // console.log(pointLayer)
         this.map.addLayer(pointLayer);
       });
+      console.log(this.map.getLayers());
       this.setTooptipsPosition();
+    },
+
+    // 关闭点图层
+    clearAllPointLayers() {
+      console.log(this.map.getLayers());
+      let pointLayers = this.map.getLayers().array_;
+      pointLayers = lodash.cloneDeep(pointLayers);
+      // console.log(pointLayers)
+      // console.log( Array.isArray(pointLayers))
+      // console.log(pointLayers.constructor === Array)
+      pointLayers.forEach((curlayer) => {
+        // console.log('我进来几次')
+        // console.log(curlayer)
+        // console.log(curlayer.values_.title)
+        if (curlayer.values_.title === "mypointLayer") {
+          console.log("我删除了图层");
+          // console.log(curlayer)
+          this.map.removeLayer(curlayer);
+        }
+      });
+      // const length = pointLayers.length
+      // for(let i = 0; i<length;i++) {
+      //        if (pointLayers[i].values_.title === "mypointLayer") {
+      //     this.map.removeLayer(curlayer);
+      //   }
+      // }
+      console.log(pointLayers);
+      console.log(this.map.getLayers().array_);
     },
 
     // 渲染多边形图
@@ -461,6 +546,7 @@ export default {
         });
 
         const polygonLayer = new VectorLayer({
+          polygonLayerId: curpolygon.id,
           title: "mypointLayer",
           source: vectorPolygonSource,
         });
@@ -473,36 +559,47 @@ export default {
     setTooptipsPosition() {
       this.map.on("singleclick", (e) => {
         if (!this.isDraw) {
-          // console.log(e.coordinate);   // 鼠标点击的坐标
-          console.log(this.targetFrom);
-          // console.log("触发了点击事件");
-
+          this.infoOverlay.setPosition(undefined); //点击空白处清除弹框
           const pixel = this.map.getEventPixel(e.originalEvent);
-          console.log(pixel);
-
-          this.map.forEachFeatureAtPixel(pixel, (feature) => {
-            // console.log(feature.getGeometry());
-            console.log(feature.getProperties());
-            console.log(feature.getProperties().geometry.flatCoordinates);
-
-            // console.log(feature.getGeometry().getCoordinates());   //渲染出来的point的精确坐标，而不是点击的坐标
-            const localPoint = feature.getGeometry().getCoordinates();
-
-            if (feature.getProperties().id && !this.isDraw) {
-              //如果是已存在目标的点击
-              console.log(localPoint);
-              console.log("我有选中这个点吗");
-              this.targetFrom.id = feature.getProperties().id;
-              this.targetFrom.name = feature.getProperties().name;
-              this.targetFrom.mark = feature.getProperties().location;
-              this.targetFrom.coordinate = localPoint;
-              this.infoOverlay.setPosition(e.coordinate);
-            }
-
-            // console.log(this.infoOverlay.getPosition());
-          });
+          const feature = this.map.forEachFeatureAtPixel(
+            pixel,
+            (feature) => feature
+          );
+          if (feature && !this.isDraw) {
+            //如果是已存在目标的点击
+            console.log(feature);
+            this.displayInfoForm(feature, e.coordinate);
+          } else {
+          }
         }
       });
+      // const layersAry = this.map.getLayers();
+      // console.log(layersAry);
+    },
+
+    // map移入feature中事件
+    setPointerMove() {
+      this.map.on("pointermove", (e) => {
+        var pixel = this.map.getEventPixel(e.originalEvent);
+        const feature = this.map.forEachFeatureAtPixel(
+          pixel,
+          (feature) => feature
+        );
+        if (feature) {
+          this.map.getTargetElement().style.cursor = "pointer";
+        } else {
+          this.map.getTargetElement().style.cursor = "";
+        }
+      });
+    },
+
+    //点击目标，弹出tooltips
+    displayInfoForm(feature, clickCoordinate) {
+      this.targetFrom.id = feature.getProperties().id;
+      this.targetFrom.name = feature.getProperties().name;
+      this.targetFrom.mark = feature.getProperties().location;
+      this.targetFrom.coordinate = feature.getGeometry().getCoordinates();
+      this.infoOverlay.setPosition(clickCoordinate);
     },
   },
 };
@@ -533,6 +630,7 @@ export default {
 }
 
 .ol-popup {
+  text-align: left;
   position: absolute;
   background-color: rgb(0, 0, 0);
   font-size: 14px;
@@ -542,6 +640,33 @@ export default {
   bottom: 12px;
   left: -50px;
   min-width: 260px;
+  p {
+    margin: 20px 0;
+  }
+  .el-form {
+    .el-form-item {
+      margin-bottom: 18px;
+      .el-form-item__label {
+        color: white;
+        width: 60px !important;
+      }
+      .el-form-item__content {
+        margin-left: 69px !important;
+      }
+    }
+    .el-input__inner {
+      height: 32px;
+    }
+    .el-button--danger {
+      color: black;
+    }
+    .el-button--danger.is-plain {
+      background: #fef0f0;
+    }
+    .el-button--danger.is-plain:hover {
+      background: #f56c6c;
+    }
+  }
 }
 .ol-popup:after,
 .ol-popup:before {
@@ -574,8 +699,5 @@ export default {
 }
 .ol-popup-closer:after {
   content: "✖";
-}
-.popup-content{
-  
 }
 </style>

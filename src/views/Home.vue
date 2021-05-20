@@ -3,6 +3,7 @@
     <el-button type="primary" @click="showHeatMap">热力图</el-button>
     <el-button @click="closeHeatMap">关闭热力图</el-button>
     <el-button type="primary" @click="showPointMap">点图</el-button>
+    <el-button @click="closePointMap">关闭点图</el-button>
     <el-button type="primary" @click="showLineMap">通联图</el-button>
     <el-button type="primary" @click="showPolygonMap">多边形图</el-button>
     <CecTileMap
@@ -10,13 +11,9 @@
       :pointsData="pointsList"
       :lineData="linesList"
       :polygonData="polygonList"
-      :type="renderMapType"
-      @createPoint="createNewPoint"
-      @deletePoint="deletePoint"
-      @createLine="createNewLine"
-      @deleteLine="deleteLine"
-      @createPolygon="createNewPolygon"
-      @deletePolygon="deletePolygon"
+      @pointChange="handlePointChange"
+      @lineChange="handleLineChange"
+      @polygonChange="handlePolygonChange"
       ref="CecMap"
     />
   </div>
@@ -25,7 +22,7 @@
 <script>
 import CecTileMap from "@/components/CecTileMap/CecTileMap.vue";
 import heatData from "../assets/all_month.json";
-
+//  @click="handleMapClick(type : point , line, polygon; data, location{x,y})" slot
 export default {
   name: "Home",
   components: {
@@ -45,10 +42,9 @@ export default {
     this.getPointList();
     this.getLineList();
     this.getpolygonList();
-    
   },
-  mounted(){
-    this.showPointMap()
+  mounted() {
+    // this.showPointMap()
   },
   methods: {
     // 获取热力图数据
@@ -176,6 +172,20 @@ export default {
       ];
     },
 
+    /***********************************************/
+    // 点
+    handlePointChange(type, point) {
+      console.log(type);
+      console.log(point);
+      if (type === "create") {
+        this.createNewPoint(point);
+      } else if (type === "delete") {
+        this.deletePoint(point);
+      } else if (type === "update") {
+        this.updatePoint(point);
+      }
+    },
+
     // 创建点
     createNewPoint(point) {
       console.log(point);
@@ -188,12 +198,33 @@ export default {
       this.$message.success("添加成功");
       console.log(this.pointsList);
     },
+    // 更新点
+    updatePoint(point) {
+      console.log(point);
+      console.log('我更新了点')
+
+    },
     //删除点
     deletePoint(point) {
-      console.log(point);
+      console.log("父组件已删除的点：" + point);
       this.pointsList.shift();
       this.$message.success("删除成功");
     },
+
+    /***********************************************/
+    // 线
+    handleLineChange(type, line) {
+      console.log(type);
+      console.log(line);
+      if (type === "create") {
+        this.createNewLine(line);
+      } else if (type === "update") {
+        this.updateLine(line);
+      } else if (type === "delete") {
+        this.deleteLine(line);
+      }
+    },
+
     // 创建线
     createNewLine(line) {
       console.log(line);
@@ -206,12 +237,32 @@ export default {
       this.$message.success("添加成功");
       console.log(this.linesList);
     },
+    // 更新线
+    updateLine(line) {
+      console.log(line)
+      console.log('我更新了线')
+
+    },
     //删除线
     deleteLine(line) {
       console.log(line);
       this.linesList.shift();
       this.$message.success("删除成功");
       console.log(this.linesList);
+    },
+
+    /***********************************************/
+    // 面
+    handlePolygonChange(type, polygon) {
+      console.log(type);
+      console.log(polygon);
+      if (type === "create") {
+        this.createNewPolygon(polygon);
+      } else if (type === "update") {
+        this.updatePolygon(polygon);
+      } else if (type === "delete") {
+        this.deletePolygon(polygon);
+      }
     },
     // 创建面
     createNewPolygon(polygon) {
@@ -225,6 +276,10 @@ export default {
       this.$message.success("添加成功");
       console.log(this.polygonList);
     },
+    // 更新面
+    updatePolygon(polygon) {
+      console.log('我更新了面')
+    },
     //删除面
     deletePolygon(polygon) {
       console.log(polygon);
@@ -232,15 +287,19 @@ export default {
       this.$message.success("删除成功");
       console.log(this.polygonList);
     },
+    
 
     showHeatMap() {
       this.$refs.CecMap.renderHeatLayer();
     },
-    closeHeatMap(){
-      this.$refs.CecMap.handleCloseHeatLayer()
+    closeHeatMap() {
+      this.$refs.CecMap.handleCloseHeatLayer();
     },
     showPointMap() {
       this.$refs.CecMap.renderPointLayer();
+    },
+    closePointMap() {
+      this.$refs.CecMap.clearAllPointLayers();
     },
     showLineMap() {
       this.$refs.CecMap.renderLineLayer();

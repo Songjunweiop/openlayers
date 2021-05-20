@@ -20,9 +20,35 @@ See [Configuration Reference](https://cli.vuejs.org/config/).
 
 
 单击地图事件
- this.map.on("singleclick", function (e) {
-   console.log(e.coordinate);
- });
+this.map.on("singleclick", (e) => {
+  if (!this.isDraw) {
+    // console.log(e.coordinate);   // 鼠标点击的坐标
+    console.log(this.targetFrom);
+    // console.log("触发了点击事件");
+    this.infoOverlay.setPosition(undefined); //点击空白处清除弹框
+    const pixel = this.map.getEventPixel(e.originalEvent);
+    const feature = this.map.forEachFeatureAtPixel(
+      pixel,
+      (feature) => feature
+    );
+    if (feature) {
+      console.log(feature.getGeometry());
+      console.log(feature.getProperties());
+
+      // console.log(feature.getGeometry().getCoordinates());   //渲染出来的point的精确坐标，而不是点击的坐标
+
+      if (feature.getProperties().id && !this.isDraw) {
+        //如果是已存在目标的点击
+        console.log(localPoint);
+        console.log("我有选中这个点吗");
+        this.displayInfoForm(feature, e.coordinate);
+      }
+
+      // console.log(this.infoOverlay.getPosition());
+    } else {
+    }
+  }
+});
 
 关闭tooptips
  // closer.onclick = () => {
