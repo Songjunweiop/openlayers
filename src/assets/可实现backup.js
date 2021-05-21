@@ -14,29 +14,29 @@ import Polygon from "ol/geom/Polygon";
 
 import { Circle as CircleStyle, Fill, Stroke, Style } from "ol/style.js";
 export default {
-  measure(map, draw, measureType) {
+  measure(map, measureType) {
     // 删除默认的双击事件
-    // const dblClickInteraction = map
-    //   .getInteractions()
-    //   .getArray()
-    //   .find((interaction) => {
-    //     return interaction instanceof DoubleClickZoom;
-    //   });
-    // map.removeInteraction(dblClickInteraction);
-    // var source = new VectorSource();
+    const dblClickInteraction = map
+      .getInteractions()
+      .getArray()
+      .find((interaction) => {
+        return interaction instanceof DoubleClickZoom;
+      });
+    map.removeInteraction(dblClickInteraction);
+    var source = new VectorSource();
 
-    // var vector = new VectorLayer({
-    //   id: "lineAndArea",
-    //   source: source,
-    //   style: new Style({
-    //     stroke: new Stroke({
-    //       color: "#ffcc33",
-    //       width: 3,
-    //     }),
-    //   }),
-    //   zIndex: 16,
-    // });
-    // map.addLayer(vector);
+    var vector = new VectorLayer({
+      id: "lineAndArea",
+      source: source,
+      style: new Style({
+        stroke: new Stroke({
+          color: "#ffcc33",
+          width: 3,
+        }),
+      }),
+      zIndex: 16,
+    });
+    map.addLayer(vector);
     /**
      * Currently drawn feature.
      * @type {module:ol/Feature~Feature}
@@ -111,7 +111,7 @@ export default {
       helpTooltipElement.classList.add("hidden");
     });
 
-    // var draw;
+    var draw;
 
     var formatLength = function (line) {
       // var sourceProj = map.getView().getProjection(); //获取投影坐标系
@@ -192,7 +192,9 @@ export default {
       draw.on(
         "drawstart",
         function (evt) {
+          // set sketch
           sketch = evt.feature;
+
           var tooltipCoord = evt.coordinate;
 
           listener = sketch.getGeometry().on("change", function (evt) {

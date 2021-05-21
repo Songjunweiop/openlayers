@@ -5,7 +5,21 @@
     <el-button type="primary" @click="showPointMap">点图</el-button>
     <el-button @click="closePointMap">关闭点图</el-button>
     <el-button type="primary" @click="showLineMap">通联图</el-button>
+    <el-button @click="closeLineMap">关闭通联图</el-button>
     <el-button type="primary" @click="showPolygonMap">多边形图</el-button>
+    <el-button @click="closePolygonMap">关闭多边形图</el-button>
+    <el-card class="box-card" v-show="isShow">
+      <div slot="header" class="clearfix">
+        <span>{{targetType}}</span>
+        <el-button style="float: right; padding: 3px 0;" type="text" @click="isShow = false"
+          >x</el-button
+        >
+      </div>
+      <p>目标ID：{{targetForm.id}}</p>
+      <p>长度/面积：{{targetForm.math}}</p>
+      <p>mark：{{targetForm.mark}}</p>
+      <p>coordinate：<br>{{targetForm.coordinate}}</p>
+    </el-card>
     <CecTileMap
       :heatData="heatData"
       :pointsData="pointsList"
@@ -14,6 +28,7 @@
       @pointChange="handlePointChange"
       @lineChange="handleLineChange"
       @polygonChange="handlePolygonChange"
+      @handleClickOnTarget="handleMapClick"
       ref="CecMap"
     />
   </div>
@@ -35,6 +50,14 @@ export default {
       pointsList: [],
       linesList: [],
       polygonList: [],
+      targetForm:{
+        id: "",
+        math: '',
+        mark: "",
+        coordinate: "",
+      },
+      targetType:'',
+      isShow: false
     };
   },
   created() {
@@ -57,37 +80,37 @@ export default {
       this.pointsList = [
         {
           id: "1",
-          name: "军",
+          // name: "",
           mark: "11军",
           coordinate: [100, 40],
         },
         {
           id: "2",
-          name: "师",
+          // name: "",
           mark: "2师",
           coordinate: [110, 35],
         },
         {
           id: "3",
-          name: "旅",
+          // name: "",
           mark: "3旅",
           coordinate: [102, 25],
         },
         {
           id: "4",
-          name: "团",
+          // name: "",
           mark: "4团",
           coordinate: [108, 30],
         },
         {
           id: "5",
-          name: "营",
+          // name: "",
           mark: "5营",
           coordinate: [106, 36],
         },
         {
           id: "6",
-          name: "连",
+          // name: "",
           mark: "5连",
           coordinate: [121, 25],
         },
@@ -100,7 +123,7 @@ export default {
       this.linesList = [
         {
           id: "01",
-          name: "军",
+          math: "33m",
           mark: "11军",
           lineCoordinate: [
             [108, 30],
@@ -109,7 +132,7 @@ export default {
         },
         {
           id: "02",
-          name: "师",
+          math: "22m",
           mark: "2师",
           lineCoordinate: [
             [108, 30],
@@ -118,7 +141,7 @@ export default {
         },
         {
           id: "03",
-          name: "旅",
+          math: "33m",
           mark: "3旅",
           lineCoordinate: [
             [108, 30],
@@ -127,7 +150,7 @@ export default {
         },
         {
           id: "04",
-          name: "团",
+          math: "66m",
           mark: "4团",
           lineCoordinate: [
             [108, 30],
@@ -136,7 +159,7 @@ export default {
         },
         {
           id: "05",
-          name: "营",
+          math: "34m",
           mark: "5营",
           lineCoordinate: [
             [108, 30],
@@ -151,7 +174,7 @@ export default {
       this.polygonList = [
         {
           id: "01",
-          name: "多边形1",
+          math: "1523m²",
           mark: "多边形1的备注",
           polygonCoordinate: [
             [100, 30],
@@ -161,7 +184,7 @@ export default {
         },
         {
           id: "02",
-          name: "多边形2",
+          math: "666m²",
           mark: "多边形2的备注",
           polygonCoordinate: [
             [125, 30],
@@ -172,11 +195,9 @@ export default {
       ];
     },
 
-    /***********************************************/
-    // 点
+    /***********************点************************/
     handlePointChange(type, point) {
       console.log(type);
-      console.log(point);
       if (type === "create") {
         this.createNewPoint(point);
       } else if (type === "delete") {
@@ -201,8 +222,15 @@ export default {
     // 更新点
     updatePoint(point) {
       console.log(point);
-      console.log('我更新了点')
+      console.log("我更新了点");
 
+      const res = this.pointsList.map((curpoint) => {
+        if (curpoint.id === point.id) {
+          curpoint.mark = point.mark;
+        }
+        return curpoint;
+      });
+      this.pointsList = res;
     },
     //删除点
     deletePoint(point) {
@@ -211,8 +239,7 @@ export default {
       this.$message.success("删除成功");
     },
 
-    /***********************************************/
-    // 线
+    /************************线***********************/
     handleLineChange(type, line) {
       console.log(type);
       console.log(line);
@@ -239,9 +266,15 @@ export default {
     },
     // 更新线
     updateLine(line) {
-      console.log(line)
-      console.log('我更新了线')
-
+      console.log(line);
+      console.log("我更新了线");
+      const res = this.linesList.map((curline) => {
+        if (curline.id === line.id) {
+          curline.mark = line.mark;
+        }
+        return curline;
+      });
+      this.linesList = res;
     },
     //删除线
     deleteLine(line) {
@@ -251,8 +284,7 @@ export default {
       console.log(this.linesList);
     },
 
-    /***********************************************/
-    // 面
+    /**********************面*************************/
     handlePolygonChange(type, polygon) {
       console.log(type);
       console.log(polygon);
@@ -278,7 +310,15 @@ export default {
     },
     // 更新面
     updatePolygon(polygon) {
-      console.log('我更新了面')
+      console.log("我更新了面");
+      console.log(polygon);
+      const res = this.polygonList.map((curpolygon) => {
+        if (curpolygon.id === polygon.id) {
+          curpolygon.mark = polygon.mark;
+        }
+        return curpolygon;
+      });
+      this.polygonList = res;
     },
     //删除面
     deletePolygon(polygon) {
@@ -287,7 +327,6 @@ export default {
       this.$message.success("删除成功");
       console.log(this.polygonList);
     },
-    
 
     showHeatMap() {
       this.$refs.CecMap.renderHeatLayer();
@@ -304,9 +343,59 @@ export default {
     showLineMap() {
       this.$refs.CecMap.renderLineLayer();
     },
+    closeLineMap() {
+      this.$refs.CecMap.clearAllLineLayers();
+    },
     showPolygonMap() {
       this.$refs.CecMap.renderPolygonLayer();
+    },
+    closePolygonMap() {
+      this.$refs.CecMap.clearAllPolygonLayers();
+    },
+
+    handleMapClick(type, data) {
+      console.log(type);
+      console.log(data);
+      this.renderForm(type, data);
+    },
+    renderForm(type, data) {
+      console.log(data)
+      this.targetType = type
+      this.targetForm = data
+      this.isShow = true
     },
   },
 };
 </script>
+<style lang="scss">
+.el-card  {
+  width: 300px;
+  position: absolute;
+  z-index: 9999;
+  top: 167px;
+  border-radius: 0 !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  color: aliceblue !important;
+  border: 0 !important;
+  p{
+    text-align: left;
+  }
+  .text {
+    font-size: 14px;
+    
+  }
+
+  .item {
+    margin-bottom: 18px;
+  }
+
+  .clearfix:before,
+  .clearfix:after {
+    display: table;
+    content: "";
+  }
+  .clearfix:after {
+    clear: both;
+  }
+}
+</style>

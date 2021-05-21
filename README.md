@@ -91,3 +91,87 @@ this.map.on("singleclick", (e) => {
 // console.log(
 //   pointFeatures.getGeometry().getCoordinates() 
 // );
+
+
+console.log(this.map.getLayers());
+let pointLayers = this.map.getLayers().array_;
+pointLayers = lodash.cloneDeep(pointLayers);
+// console.log(pointLayers)
+// console.log( Array.isArray(pointLayers))
+// console.log(pointLayers.constructor === Array)
+pointLayers.forEach((curlayer) => {
+  // console.log('我进来几次')
+  // console.log(curlayer)
+  // console.log(curlayer.values_.title)
+  if (curlayer.values_.title === "mypointLayer") {
+    console.log("我删除了图层");
+    // console.log(curlayer)
+    this.map.removeLayer(curlayer);
+  }
+});
+// const length = pointLayers.length
+// for(let i = 0; i<length;i++) {
+//        if (pointLayers[i].values_.title === "mypointLayer") {
+//     this.map.removeLayer(curlayer);
+//   }
+// }
+console.log(pointLayers);
+console.log(this.map.getLayers().array_);
+
+
+// 点击下拉框绘制要创建的画点、线、面
+    toggleDrawmapLayer() {
+      if (this.drawmapLayer) this.map.removeLayer(this.drawmapLayer);
+      console.log("执行了吗");
+
+      const source = new VectorSource({ wrapX: false });
+      this.drawmapLayer = new VectorLayer({
+        source: source,
+      });
+
+      // 选择标记类型
+      if (this.selectedDrawValue !== "None") {
+        if(this.selectedDrawValue === 'LineString'){
+
+        }else if(this.selectedDrawValue === 'Polygon'){
+
+        }
+        this.map.removeInteraction(this.draw);
+
+        this.draw = new olInteraction.Draw({
+          source: source,
+          type: this.selectedDrawValue,
+        });
+        
+        this.map.addInteraction(this.draw);
+      } else {
+        this.map.removeInteraction(this.draw);
+        console.log(this.draw);
+        this.isDraw = false;
+      }
+
+      this.draw.on("drawstart", (e) => {
+        this.isDraw = true;
+        this.selectedDrawValue = e.target.type_;
+      });
+      this.draw.on("drawend", (e) => {
+        this.infoOverlay.setPosition(undefined);
+        let finishCoordinate;
+        console.log(e.target.sketchCoords_);
+        if (this.selectedDrawValue === "Point") {
+          this.addForm.targetCoordinate = e.target.sketchCoords_;
+          finishCoordinate = e.target.sketchCoords_;
+        } else if (this.selectedDrawValue === "LineString") {
+          const lineCoordinate = e.target.sketchCoords_;
+          this.addForm.targetCoordinate = lineCoordinate;
+          finishCoordinate = lineCoordinate[1];
+        } else if (this.selectedDrawValue === "Polygon") {
+          this.addForm.targetCoordinate = e.target.sketchCoords_[0];
+          finishCoordinate = e.target.sketchCoords_[0][0];
+        }
+        this.addOverlay.setPosition(finishCoordinate);
+      });
+
+      // this.setTooptipsPosition();
+      this.map.addLayer(this.drawmapLayer);
+    },
