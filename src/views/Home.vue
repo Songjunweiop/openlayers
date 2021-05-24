@@ -10,15 +10,18 @@
     <el-button @click="closePolygonMap">关闭多边形图</el-button>
     <el-card class="box-card" v-show="isShow">
       <div slot="header" class="clearfix">
-        <span>{{targetType}}</span>
-        <el-button style="float: right; padding: 3px 0;" type="text" @click="isShow = false"
+        <span>{{ targetType }}</span>
+        <el-button
+          style="float: right; padding: 3px 0;"
+          type="text"
+          @click="isShow = false"
           >x</el-button
         >
       </div>
-      <p>目标ID：{{targetForm.id}}</p>
-      <p>长度/面积：{{targetForm.math}}</p>
-      <p>mark：{{targetForm.mark}}</p>
-      <p>coordinate：<br>{{targetForm.coordinate}}</p>
+      <p>目标ID：{{ targetForm.id }}</p>
+      <p>长度/面积：{{ targetForm.math }}</p>
+      <p>mark：{{ targetForm.mark }}</p>
+      <p>coordinate：<br />{{ targetForm.coordinate }}</p>
     </el-card>
     <CecTileMap
       :heatData="heatData"
@@ -50,14 +53,14 @@ export default {
       pointsList: [],
       linesList: [],
       polygonList: [],
-      targetForm:{
+      targetForm: {
         id: "",
-        math: '',
+        math: "",
         mark: "",
         coordinate: "",
       },
-      targetType:'',
-      isShow: false
+      targetType: "",
+      isShow: false,
     };
   },
   created() {
@@ -212,7 +215,7 @@ export default {
       console.log(point);
       this.pointsList.push({
         id: "999",
-        name: point.name,
+        math: point.math,
         mark: point.mark,
         coordinate: point.targetCoordinate,
       });
@@ -257,7 +260,7 @@ export default {
       console.log(line);
       this.linesList.push({
         id: "999",
-        name: line.name,
+        math: line.math,
         mark: line.mark,
         lineCoordinate: line.targetCoordinate,
       });
@@ -301,7 +304,7 @@ export default {
       console.log(polygon);
       this.polygonList.push({
         id: "999",
-        name: polygon.name,
+        math: polygon.math,
         mark: polygon.mark,
         polygonCoordinate: polygon.targetCoordinate,
       });
@@ -359,16 +362,16 @@ export default {
       this.renderForm(type, data);
     },
     renderForm(type, data) {
-      console.log(data)
-      this.targetType = type
-      this.targetForm = data
-      this.isShow = true
+      console.log(data);
+      this.targetType = type;
+      this.targetForm = data;
+      this.isShow = true;
     },
   },
 };
 </script>
 <style lang="scss">
-.el-card  {
+.el-card {
   width: 300px;
   position: absolute;
   z-index: 9999;
@@ -377,12 +380,11 @@ export default {
   background-color: rgba(0, 0, 0, 0.5) !important;
   color: aliceblue !important;
   border: 0 !important;
-  p{
+  p {
     text-align: left;
   }
   .text {
     font-size: 14px;
-    
   }
 
   .item {

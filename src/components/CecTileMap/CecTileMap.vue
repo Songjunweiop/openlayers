@@ -72,10 +72,9 @@
           <el-form-item label="备注">
             <el-input v-model="addForm.mark"></el-input>
           </el-form-item>
-          <el-form-item label="距离">
+          <el-form-item label="距离" v-show="hasMath">
             <el-input v-model="output"></el-input>
           </el-form-item>
-
 
           <el-form-item>
             <el-button plain size="mini" type="primary" @click="handleCreate()"
@@ -103,7 +102,11 @@ import {
   Vector as VectorLayer,
   Tile as TileLayer,
 } from "ol/layer";
-import { Vector as VectorSource, OSM as OSMSource, XYZ as XYZSource } from "ol/source";
+import {
+  Vector as VectorSource,
+  OSM as OSMSource,
+  XYZ as XYZSource,
+} from "ol/source";
 import * as olControl from "ol/control";
 import * as olInteraction from "ol/interaction";
 import {
@@ -184,8 +187,8 @@ export default {
         mark: "",
         targetCoordinate: [],
       },
-      output:0,
-      hasMath:true
+      output: 0,
+      hasMath: true,
     };
   },
   watch: {
@@ -209,19 +212,19 @@ export default {
   methods: {
     // 初始化map
     initMap() {
-      const source =new XYZSource({
+      const source = new XYZSource({
         maxZoom: 15,
         url:
-          'https://services.arcgisonline.com/arcgis/rest/services/' +
-          'ESRI_Imagery_World_2D/MapServer/tile/{z}/{y}/{x}',
-        projection: 'EPSG:4326',
+          "https://services.arcgisonline.com/arcgis/rest/services/" +
+          "ESRI_Imagery_World_2D/MapServer/tile/{z}/{y}/{x}",
+        projection: "EPSG:4326",
         tileSize: 512, // the tile size supported by the ArcGIS tile service
         maxResolution: 180 / 512, // Esri's tile grid fits 180 degrees on one 512 px tile
-        wrapX: true,
-      })
+        wrapX: false,
+        imageSmoothing:false,
+      });
       const raster = new TileLayer({
         source: source,
-        // source: new OSMSource(),
       });
       // 点击点弹出tooptips元素
       this.infoContainer = this.$refs.popup;
@@ -247,17 +250,15 @@ export default {
       });
 
       this.map = new Map({
-        layers: [raster],
+        layers: [raster,],
         target: "map",
         view: new View({
-          // projection: "EPSG:4326",
-          // projection: "EPSG:3857",
+          // projection: "EPSG:4326", //正确
+          projection: "EPSG:3857",
           center: [102, 35],
-          // center: [-11000000, 4600000],
-          // zoom: 4,
-          // center: [110, 35],
-          zoom: 4,
+          zoom: 5,
           minZoom: 2,
+          maxZoom: 10
         }),
         interactions: new olInteraction.defaults({
           doubleClickZoom: false,
@@ -266,7 +267,7 @@ export default {
         controls: olControl
           .defaults()
           .extend([
-            new olControl.FullScreen(),
+            // new olControl.FullScreen(),
             new olControl.ZoomSlider(),
             new olControl.MousePosition(),
           ]),
@@ -293,20 +294,15 @@ export default {
 
     // 添加点、线、面
     handleCreate() {
-      console.log(this.addForm);
-      console.log(this.selectedDrawValue);
       if (this.selectedDrawValue === "Point") {
-        console.log("这里是创建点");
         this.$emit("pointChange", "create", this.addForm);
         this.renderPointLayer();
       } else if (this.selectedDrawValue === "LineString") {
-        console.log("这里创建的线");
-        this.addForm.name = this.output
+        this.addForm.math = this.output;
         this.$emit("lineChange", "create", this.addForm);
         this.renderLineLayer();
       } else if (this.selectedDrawValue === "Polygon") {
-        console.log("这里创建的面");
-        this.addForm.name = this.output
+        this.addForm.math = this.output;
         this.$emit("polygonChange", "create", this.addForm);
         this.renderPolygonLayer();
       }
@@ -315,18 +311,14 @@ export default {
 
     // 更新点、线、面
     handleUpdate() {
-      console.log(this.targetFrom);
       const isDeep = (arr) => arr.some((item) => item instanceof Array);
       const updatetype = isDeep(this.targetFrom.coordinate);
 
       if (!updatetype) {
-        console.log("我编辑的是点");
         this.$emit("pointChange", "update", this.targetFrom);
       } else if (updatetype && this.targetFrom.coordinate.length !== 1) {
-        console.log("我编辑的是线");
         this.$emit("lineChange", "update", this.targetFrom);
       } else {
-        console.log("我编辑的是面");
         this.$emit("polygonChange", "update", this.targetFrom);
       }
 
@@ -335,13 +327,10 @@ export default {
 
     // 删除点、线、面
     handleDelete() {
-      console.log(this.targetFrom);
       const isDeep = (arr) => arr.some((item) => item instanceof Array);
       const deletetype = isDeep(this.targetFrom.coordinate);
       const allLayers = this.map.getLayers().array_;
-      // console.log(deletetype);
       if (!deletetype) {
-        console.log("我删除的是点");
         allLayers.forEach((curLayer) => {
           if (curLayer.values_.pointLayerId === this.targetFrom.id) {
             this.map.removeLayer(curLayer);
@@ -349,7 +338,6 @@ export default {
         });
         this.$emit("pointChange", "delete", this.targetFrom.id);
       } else if (deletetype && this.targetFrom.coordinate.length !== 1) {
-        console.log("我删除的是线");
         allLayers.forEach((curLayer) => {
           if (curLayer.values_.lineLayerId === this.targetFrom.id) {
             this.map.removeLayer(curLayer);
@@ -357,7 +345,6 @@ export default {
         });
         this.$emit("lineChange", "delete", this.targetFrom.id);
       } else {
-        console.log("我删除的是面");
         allLayers.forEach((curLayer) => {
           if (curLayer.values_.polygonLayerId === this.targetFrom.id) {
             this.map.removeLayer(curLayer);
@@ -372,7 +359,6 @@ export default {
     // 点击下拉框绘制要创建的画点、线、面
     toggleDrawmapLayer() {
       if (this.drawmapLayer) this.map.removeLayer(this.drawmapLayer);
-      console.log("执行了吗");
 
       const source = new VectorSource({ wrapX: false });
       this.drawmapLayer = new VectorLayer({
@@ -395,11 +381,12 @@ export default {
       }
 
       this.draw.on("drawstart", (e) => {
+        this.addForm.mark = "";
         this.isDraw = true;
         this.selectedDrawValue = e.target.type_;
-        this.output = 0
+        this.output = 0;
         const sketch = e.feature;
-        
+
         sketch.getGeometry().on("change", (evt) => {
           let geom = evt.target;
           // let output;
@@ -408,22 +395,23 @@ export default {
           } else if (geom instanceof LineString) {
             this.output = this.formatLength(geom);
           }
-          console.log(this.output);
         });
       });
 
       this.draw.on("drawend", (e) => {
         this.infoOverlay.setPosition(undefined);
         let finishCoordinate;
-        console.log(e.target.sketchCoords_);
         if (this.selectedDrawValue === "Point") {
+          this.hasMath = false;
           this.addForm.targetCoordinate = e.target.sketchCoords_;
           finishCoordinate = e.target.sketchCoords_;
         } else if (this.selectedDrawValue === "LineString") {
+          this.hasMath = true;
           const lineCoordinate = e.target.sketchCoords_;
           this.addForm.targetCoordinate = lineCoordinate;
           finishCoordinate = lineCoordinate[1];
         } else if (this.selectedDrawValue === "Polygon") {
+          this.hasMath = true;
           this.addForm.targetCoordinate = e.target.sketchCoords_[0];
           finishCoordinate = e.target.sketchCoords_[0][0];
         }
@@ -439,11 +427,10 @@ export default {
     },
     // 获取长度
     formatLength(line) {
-      const sourceProj = this.map.getView().getProjection(); 
-
+      // const sourceProj = this.map.getView().getProjection();
       //ol/sphere里有getLength()和getArea()用来测量距离和区域面积，默认的投影坐标系是EPSG:3857, 其中有个options的参数，可以设置投影坐标系
       const length = getLength(line, {
-        projection: sourceProj /*, radius: 6371008.8*/,
+        projection: "EPSG:4326" /*, radius: 6371008.8*/,
       });
       let output;
       if (length > 100) {
@@ -456,12 +443,10 @@ export default {
     // 获取面积
     formatArea(polygon) {
       //获取投影坐标系
-      const sourceProj = this.map.getView().getProjection();
-      const area = getArea(polygon, { projection: sourceProj });
+      const area = getArea(polygon, { projection: "EPSG:4326" });
       let output;
       if (area > 10000) {
-        output =
-          Math.round((area / 1000000) * 100) / 100 + " " + "km²";
+        output = Math.round((area / 1000000) * 100) / 100 + " " + "km²";
       } else {
         output = Math.round(area * 100) / 100 + " " + "m²";
       }
@@ -471,7 +456,6 @@ export default {
     //渲染热力图
     renderHeatLayer() {
       if (this.heatmapLayer) this.map.removeLayer(this.heatmapLayer);
-      console.log(this.map.getLayers());
       this.heatmapLayer = new HeatmapLayer({
         source: new VectorSource({
           features: new GeoJSON().readFeatures(this.heatData, {
@@ -494,8 +478,7 @@ export default {
     // 渲染点图
     renderPointLayer() {
       this.clearAllPointLayers();
-      console.log("渲染点了吗");
-      console.log(this.pointsData);
+      let pointAry = [];
       this.pointsData.map((curpoint) => {
         const pointFeatures = new Feature({
           geometry: new Point(curpoint.coordinate),
@@ -504,9 +487,6 @@ export default {
           id: curpoint.id,
           // math: curpoint.math,
           location: curpoint.mark,
-        });
-        pointFeatures.on("singleClick", (e) => {
-          console.log(e);
         });
 
         const vectorPointSource = new VectorSource({
@@ -525,33 +505,27 @@ export default {
             }),
           }),
         });
-        this.map.addLayer(pointLayer);
+        pointAry.push(pointLayer);
+        // this.map.addLayer(pointLayer);
       });
+      console.log(pointAry)
+      this.map.addLayer(pointAry);
 
       this.setTooptipsPosition();
     },
 
     // 关闭点图层
     clearAllPointLayers() {
-      console.log(this.map.getLayerGroup().getLayersArray());
-      console.log(this.map.getLayers());
-      // const pointLayers = this.map.getLayers().array_
       const pointLayers = this.map.getLayerGroup().getLayersArray();
-      // console.log(pointLayers)
-      // console.log(pointLayers[4].get('title'))
       pointLayers.forEach((curLayer) => {
         if (curLayer.get("title") === "mypointLayer")
           this.map.removeLayer(curLayer);
       });
-      console.log(this.map.getLayerGroup().getLayersArray());
-      // this.map.removeLayer(pointLayers)
     },
 
     // 渲染通联图
     renderLineLayer() {
       this.clearAllLineLayers();
-      console.log("渲染线了吗");
-      console.log(this.lineData);
       this.lineData.map((curline) => {
         const lineFeatures = new Feature({
           geometry: new LineString(curline.lineCoordinate),
@@ -580,25 +554,16 @@ export default {
 
     // 关闭通联层
     clearAllLineLayers() {
-      console.log(this.map.getLayerGroup().getLayersArray());
-      console.log(this.map.getLayers());
-      // const pointLayers = this.map.getLayers().array_
       const pointLayers = this.map.getLayerGroup().getLayersArray();
-      // console.log(pointLayers)
-      // console.log(pointLayers[4].get('title'))
       pointLayers.forEach((curLayer) => {
         if (curLayer.get("title") === "mylineLayer")
           this.map.removeLayer(curLayer);
       });
-      console.log(this.map.getLayerGroup().getLayersArray());
-      // this.map.removeLayer(pointLayers)
     },
 
     // 渲染多边形图
     renderPolygonLayer() {
       this.clearAllPolygonLayers();
-      console.log("渲染多边形了吗");
-      console.log(this.polygonData);
       this.polygonData.map((curpolygon) => {
         const polygonCoordinates = JSON.parse(
           JSON.stringify(curpolygon.polygonCoordinate)
@@ -627,18 +592,11 @@ export default {
 
     // 关闭多边形层
     clearAllPolygonLayers() {
-      console.log(this.map.getLayerGroup().getLayersArray());
-      console.log(this.map.getLayers());
-      // const pointLayers = this.map.getLayers().array_
       const pointLayers = this.map.getLayerGroup().getLayersArray();
-      // console.log(pointLayers)
-      // console.log(pointLayers[4].get('title'))
       pointLayers.forEach((curLayer) => {
         if (curLayer.get("title") === "mypolygonLayer")
           this.map.removeLayer(curLayer);
       });
-      console.log(this.map.getLayerGroup().getLayersArray());
-      // this.map.removeLayer(pointLayers)
     },
 
     // map点击事件注册
@@ -653,10 +611,7 @@ export default {
           );
           if (feature && !this.isDraw) {
             //如果是已存在目标的点击
-            // console.log(feature);
             this.displayInfoForm(feature, e.coordinate);
-            // this.handleClickOnTarget(feature)
-          } else {
           }
         }
       });
@@ -679,28 +634,25 @@ export default {
     },
 
     // 传回给父组件的信息
-    handleClickOnTarget(feature){
-      // console.log(feature)
-      const featureData = feature.values_
-      const featureType = feature.getGeometry().getType()
-      this.$emit("handleClickOnTarget", featureType, this.targetFrom)
+    handleClickOnTarget(feature) {
+      const featureType = feature.getGeometry().getType();
+      this.$emit("handleClickOnTarget", featureType, this.targetFrom);
     },
 
     //点击目标，弹出tooltips
     displayInfoForm(feature, clickCoordinate) {
       this.targetFrom.id = feature.getProperties().id;
-      if(feature.getProperties().math){
-        this.hasMath = true
+      if (feature.getProperties().math) {
+        this.hasMath = true;
         this.targetFrom.math = feature.getProperties().math;
-      }else{
-        this.hasMath = false
+      } else {
+        this.hasMath = false;
       }
-      
-      console.log(feature.getProperties())
+
       this.targetFrom.mark = feature.getProperties().location;
       this.targetFrom.coordinate = feature.getGeometry().getCoordinates();
       this.infoOverlay.setPosition(clickCoordinate);
-      this.handleClickOnTarget(feature)
+      this.handleClickOnTarget(feature);
     },
   },
 };
@@ -755,7 +707,7 @@ export default {
         margin-left: 69px !important;
       }
     }
-    .el-input.is-disabled .el-input__inner{
+    .el-input.is-disabled .el-input__inner {
       color: #606266;
     }
     .el-input__inner {
