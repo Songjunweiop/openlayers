@@ -39,14 +39,16 @@
               size="mini"
               type="primary"
               @click="handleUpdate('update')"
-              >保存</el-button
+            >保存
+            </el-button
             >
             <el-button
               plain
               size="mini"
               @click="handleDelete('delete')"
               type="danger"
-              >删除</el-button
+            >删除
+            </el-button
             >
           </el-form-item>
         </el-form>
@@ -78,10 +80,12 @@
 
           <el-form-item>
             <el-button plain size="mini" type="primary" @click="handleCreate()"
-              >创建</el-button
+            >创建
+            </el-button
             >
             <el-button plain size="mini" @click="closeTooptips()"
-              >取消</el-button
+            >取消
+            </el-button
             >
           </el-form-item>
         </el-form>
@@ -92,6 +96,7 @@
     <div id="map" style="width: 98vw; height: 85vh;"></div>
   </div>
 </template>
+
 
 <script>
 import "ol/ol.css";
@@ -131,6 +136,7 @@ import Measure from "./Measure";
 
 import countriesData from "../../assets/countries.json";
 import lodash from "lodash";
+
 useGeographic();
 export default {
   name: "CecTileMap",
@@ -205,7 +211,8 @@ export default {
       this.renderPolygonLayer();
     },
   },
-  created() {},
+  created() {
+  },
   mounted() {
     this.initMap();
   },
@@ -221,7 +228,7 @@ export default {
         tileSize: 512, // the tile size supported by the ArcGIS tile service
         maxResolution: 180 / 512, // Esri's tile grid fits 180 degrees on one 512 px tile
         wrapX: false,
-        imageSmoothing:false,
+        imageSmoothing: false,
       });
       const raster = new TileLayer({
         source: source,
@@ -478,7 +485,6 @@ export default {
     // 渲染点图
     renderPointLayer() {
       this.clearAllPointLayers();
-      let pointAry = [];
       this.pointsData.map((curpoint) => {
         const pointFeatures = new Feature({
           geometry: new Point(curpoint.coordinate),
@@ -492,6 +498,7 @@ export default {
         const vectorPointSource = new VectorSource({
           features: [pointFeatures],
         });
+        console.log(vectorPointSource.getProjection())
 
         const pointLayer = new VectorLayer({
           pointLayerId: curpoint.id,
@@ -505,11 +512,8 @@ export default {
             }),
           }),
         });
-        pointAry.push(pointLayer);
-        // this.map.addLayer(pointLayer);
+        this.map.addLayer(pointLayer);
       });
-      console.log(pointAry)
-      this.map.addLayer(pointAry);
 
       this.setTooptipsPosition();
     },
@@ -693,37 +697,47 @@ export default {
   bottom: 12px;
   left: -50px;
   min-width: 260px;
+
   p {
     margin: 20px 0;
   }
+
   .el-form {
     .el-form-item {
       margin-bottom: 18px;
+
       .el-form-item__label {
         color: white;
         width: 60px !important;
       }
+
       .el-form-item__content {
         margin-left: 69px !important;
       }
     }
+
     .el-input.is-disabled .el-input__inner {
       color: #606266;
     }
+
     .el-input__inner {
       height: 32px;
     }
+
     .el-button--danger {
       color: black;
     }
+
     .el-button--danger.is-plain {
       background: #fef0f0;
     }
+
     .el-button--danger.is-plain:hover {
       background: #f56c6c;
     }
   }
 }
+
 .ol-popup:after,
 .ol-popup:before {
   top: 100%;
@@ -734,18 +748,21 @@ export default {
   position: absolute;
   pointer-events: none;
 }
+
 .ol-popup:after {
   border-top-color: rgb(0, 0, 0);
   border-width: 10px;
   left: 48px;
   margin-left: -10px;
 }
+
 .ol-popup:before {
   // border-top-color: #cccccc;
   border-width: 11px;
   left: 48px;
   margin-left: -11px;
 }
+
 .ol-popup-closer {
   text-decoration: none;
   position: absolute;
@@ -753,6 +770,7 @@ export default {
   right: 8px;
   color: white;
 }
+
 .ol-popup-closer:after {
   content: "✖";
 }
