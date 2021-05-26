@@ -17,12 +17,7 @@
     </el-select>
     <!--  点击弹框 begin -->
     <div class="ol-popup" ref="popup">
-      <a
-        href="#"
-        id="popup-closer"
-        class="ol-popup-closer"
-        @click="closeTooptips()"
-      ></a>
+      <a href="#" class="ol-popup-closer" @click="closeTooptips()"></a>
       <div class="popup-content" ref="popup_content">
         <p>目标位置：{{ targetFrom.coordinate }}</p>
         <el-form ref="form" :model="targetFrom" label-width="80px">
@@ -39,17 +34,15 @@
               size="mini"
               type="primary"
               @click="handleUpdate('update')"
-            >保存
-            </el-button
-            >
+              >保存
+            </el-button>
             <el-button
               plain
               size="mini"
               @click="handleDelete('delete')"
               type="danger"
-            >删除
-            </el-button
-            >
+              >删除
+            </el-button>
           </el-form-item>
         </el-form>
       </div>
@@ -58,12 +51,7 @@
 
     <!-- addPoint 点击弹框 begin -->
     <div class="ol-popup" ref="add_popup">
-      <a
-        href="#"
-        id="popup-closer"
-        class="ol-popup-closer"
-        @click="closeTooptips()"
-      ></a>
+      <a href="#" class="ol-popup-closer" @click="closeTooptips()"></a>
       <div ref="add_popup_content">
         <p>当前目标位置：{{ addForm.targetCoordinate }}</p>
 
@@ -80,13 +68,11 @@
 
           <el-form-item>
             <el-button plain size="mini" type="primary" @click="handleCreate()"
-            >创建
-            </el-button
-            >
+              >创建
+            </el-button>
             <el-button plain size="mini" @click="closeTooptips()"
-            >取消
-            </el-button
-            >
+              >取消
+            </el-button>
           </el-form-item>
         </el-form>
       </div>
@@ -96,7 +82,6 @@
     <div id="map" style="width: 98vw; height: 85vh;"></div>
   </div>
 </template>
-
 
 <script>
 import "ol/ol.css";
@@ -154,6 +139,8 @@ export default {
       addLineContainer: "",
       addPolygonContainer: "",
       heatmapLayer: null,
+      pointLayer: null,
+      lineLayer: null,
       drawmapLayer: null,
       draw: null,
       snap: null,
@@ -211,8 +198,7 @@ export default {
       this.renderPolygonLayer();
     },
   },
-  created() {
-  },
+  created() {},
   mounted() {
     this.initMap();
   },
@@ -257,7 +243,7 @@ export default {
       });
 
       this.map = new Map({
-        layers: [raster,],
+        layers: [raster],
         target: "map",
         view: new View({
           // projection: "EPSG:4326", //正确
@@ -265,7 +251,7 @@ export default {
           center: [102, 35],
           zoom: 5,
           minZoom: 2,
-          maxZoom: 10
+          maxZoom: 10,
         }),
         interactions: new olInteraction.defaults({
           doubleClickZoom: false,
@@ -274,12 +260,13 @@ export default {
         controls: olControl
           .defaults()
           .extend([
-            // new olControl.FullScreen(),
+            new olControl.FullScreen(),
             new olControl.ZoomSlider(),
             new olControl.MousePosition(),
           ]),
         overlays: [this.infoOverlay, this.addOverlay],
       });
+      console.log(this.map.getView().getProjection());
       this.setPointerMove();
     },
 
@@ -484,75 +471,96 @@ export default {
 
     // 渲染点图
     renderPointLayer() {
-      this.clearAllPointLayers();
+      if (this.pointLayer) this.map.removeLayer(this.pointLayer);
+      console.log(this.pointsData);
+      let features = [];
+
       this.pointsData.map((curpoint) => {
-        const pointFeatures = new Feature({
-          geometry: new Point(curpoint.coordinate),
-        });
-        pointFeatures.setProperties({
-          id: curpoint.id,
-          // math: curpoint.math,
-          location: curpoint.mark,
-        });
-
-        const vectorPointSource = new VectorSource({
-          features: [pointFeatures],
-        });
-        console.log(vectorPointSource.getProjection())
-
-        const pointLayer = new VectorLayer({
-          pointLayerId: curpoint.id,
-          title: "mypointLayer",
-          source: vectorPointSource,
-          style: new Style({
-            image: new Circle({
-              radius: 5,
-              fill: new Fill({ color: "red" }),
-              stroke: new Stroke({ color: "red", size: 1 }),
-            }),
-          }),
-        });
-        this.map.addLayer(pointLayer);
+        features.push(
+          new Feature({
+            geometry: new Point(curpoint.coordinate),
+            id: curpoint.id,
+            mark: curpoint.mark,
+          })
+        );
       });
+      // const pointFeatures = new Feature({
+      //   geometry: new Point(curpoint.coordinate),
+      // });
+      // pointFeatures.setProperties({
+      //   id: curpoint.id,
+      //   // math: curpoint.math,
+      //   mark: curpoint.mark,
+      // });
+
+      const vectorPointSource = new VectorSource({
+        features: [],
+      });
+      vectorPointSource.addFeatures(features);
+
+      this.pointLayer = new VectorLayer({
+        title: "mypointLayer",
+        source: vectorPointSource,
+        style: new Style({
+          image: new Circle({
+            radius: 5,
+            fill: new Fill({ color: "red" }),
+            stroke: new Stroke({ color: "red", size: 1 }),
+          }),
+        }),
+      });
+      this.map.addLayer(this.pointLayer);
+      console.log(this.map.getLayerGroup().getLayersArray());
 
       this.setTooptipsPosition();
     },
 
     // 关闭点图层
     clearAllPointLayers() {
-      const pointLayers = this.map.getLayerGroup().getLayersArray();
-      pointLayers.forEach((curLayer) => {
-        if (curLayer.get("title") === "mypointLayer")
-          this.map.removeLayer(curLayer);
-      });
+      // const pointLayers = this.map.getLayerGroup().getLayersArray();
+      // pointLayers.forEach((curLayer) => {
+      //   if (curLayer.get("title") === "mypointLayer")
+      //     this.map.removeLayer(curLayer);
+      // });
+      this.map.removeLayer(this.pointLayer);
     },
 
     // 渲染通联图
     renderLineLayer() {
-      this.clearAllLineLayers();
+      if (this.lineLayer) this.map.removeLayer(this.lineLayer);
+      console.log(this.lineData);
+      let lineFeatures = [];
       this.lineData.map((curline) => {
-        const lineFeatures = new Feature({
-          geometry: new LineString(curline.lineCoordinate),
-        });
-        lineFeatures.setProperties({
-          id: curline.id,
-          math: curline.math,
-          location: curline.mark,
-        });
-        const vectorLineSource = new VectorSource({
-          features: [lineFeatures],
-        });
-
-        const lineLayer = new VectorLayer({
-          lineLayerId: curline.id,
-          title: "mylineLayer",
-          source: vectorLineSource,
-          style: new Style({
-            stroke: new Stroke({ color: "#00FF00", width: 2 }),
-          }),
-        });
-        this.map.addLayer(lineLayer);
+        lineFeatures.push(
+          new Feature({
+            geometry: new LineString(curline.lineCoordinate),
+            id: curline.id,
+            math: curline.math,
+            mark: curline.mark,
+          })
+        );
       });
+      // const lineFeatures = new Feature({
+      //   geometry: new LineString(curline.lineCoordinate),
+      // });
+      // lineFeatures.setProperties({
+      //   id: curline.id,
+      //   math: curline.math,
+      //   mark: curline.mark,
+      // });
+      const vectorLineSource = new VectorSource({
+        features: [],
+      });
+      vectorLineSource.addFeatures(lineFeatures);
+      this.lineLayer = new VectorLayer({
+        title: "mylineLayer",
+        source: vectorLineSource,
+        style: new Style({
+          stroke: new Stroke({ color: "#00FF00", width: 2 }),
+        }),
+      });
+      this.map.addLayer(this.lineLayer);
+      console.log(this.map.getLayerGroup().getLayersArray());
       this.setTooptipsPosition();
     },
 
@@ -568,29 +576,34 @@ export default {
     // 渲染多边形图
     renderPolygonLayer() {
       this.clearAllPolygonLayers();
+      let polygonFeatures = [];
       this.polygonData.map((curpolygon) => {
         const polygonCoordinates = JSON.parse(
           JSON.stringify(curpolygon.polygonCoordinate)
         );
-        const polygonFeatures = new Feature({
-          geometry: new Polygon([polygonCoordinates]),
-        });
-        polygonFeatures.setProperties({
-          id: curpolygon.id,
-          math: curpolygon.math,
-          location: curpolygon.mark,
-        });
-        const vectorPolygonSource = new VectorSource({
-          features: [polygonFeatures],
-        });
-
-        const polygonLayer = new VectorLayer({
-          polygonLayerId: curpolygon.id,
-          title: "mypolygonLayer",
-          source: vectorPolygonSource,
-        });
-        this.map.addLayer(polygonLayer);
+        polygonFeatures.push(
+          new Feature({
+            geometry: new Polygon([polygonCoordinates]),
+            id: curpolygon.id,
+            math: curpolygon.math,
+            mark: curpolygon.mark,
+          })
+        );
       });
+
+     
+      const vectorPolygonSource = new VectorSource({
+        features: [],
+      });
+      vectorPolygonSource.addFeatures(polygonFeatures);
+
+      const polygonLayer = new VectorLayer({
+        // polygonLayerId: curpolygon.id,
+        title: "mypolygonLayer",
+        source: vectorPolygonSource,
+      });
+      this.map.addLayer(polygonLayer);
+
       this.setTooptipsPosition();
     },
 
@@ -615,6 +628,7 @@ export default {
           );
           if (feature && !this.isDraw) {
             //如果是已存在目标的点击
+            console.log(e.coordinate);
             this.displayInfoForm(feature, e.coordinate);
           }
         }
@@ -653,8 +667,9 @@ export default {
         this.hasMath = false;
       }
 
-      this.targetFrom.mark = feature.getProperties().location;
+      this.targetFrom.mark = feature.getProperties().mark;
       this.targetFrom.coordinate = feature.getGeometry().getCoordinates();
+      // console.log(feature.getGeometry().getCoordinates())
       this.infoOverlay.setPosition(clickCoordinate);
       this.handleClickOnTarget(feature);
     },
