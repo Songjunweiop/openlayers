@@ -34,14 +34,14 @@
               size="mini"
               type="primary"
               @click="handleUpdate('update')"
-              >保存
+            >保存
             </el-button>
             <el-button
               plain
               size="mini"
               @click="handleDelete('delete')"
               type="danger"
-              >删除
+            >删除
             </el-button>
           </el-form-item>
         </el-form>
@@ -68,10 +68,10 @@
 
           <el-form-item>
             <el-button plain size="mini" type="primary" @click="handleCreate()"
-              >创建
+            >创建
             </el-button>
             <el-button plain size="mini" @click="closeTooptips()"
-              >取消
+            >取消
             </el-button>
           </el-form-item>
         </el-form>
@@ -141,6 +141,7 @@ export default {
       heatmapLayer: null,
       pointLayer: null,
       lineLayer: null,
+      polygonLayer: null,
       drawmapLayer: null,
       draw: null,
       snap: null,
@@ -198,7 +199,8 @@ export default {
       this.renderPolygonLayer();
     },
   },
-  created() {},
+  created() {
+  },
   mounted() {
     this.initMap();
   },
@@ -267,6 +269,7 @@ export default {
         overlays: [this.infoOverlay, this.addOverlay],
       });
       console.log(this.map.getView().getProjection());
+      this.setTooptipsPosition()
       this.setPointerMove();
     },
 
@@ -323,27 +326,17 @@ export default {
     handleDelete() {
       const isDeep = (arr) => arr.some((item) => item instanceof Array);
       const deletetype = isDeep(this.targetFrom.coordinate);
-      const allLayers = this.map.getLayers().array_;
+      // const allLayers = this.map.getLayers().array_;
       if (!deletetype) {
-        allLayers.forEach((curLayer) => {
-          if (curLayer.values_.pointLayerId === this.targetFrom.id) {
-            this.map.removeLayer(curLayer);
-          }
-        });
+        // allLayers.forEach((curLayer) => {
+        //   if (curLayer.values_.pointLayerId === this.targetFrom.id) {
+        //     this.map.removeLayer(curLayer);
+        //   }
+        // });
         this.$emit("pointChange", "delete", this.targetFrom.id);
       } else if (deletetype && this.targetFrom.coordinate.length !== 1) {
-        allLayers.forEach((curLayer) => {
-          if (curLayer.values_.lineLayerId === this.targetFrom.id) {
-            this.map.removeLayer(curLayer);
-          }
-        });
         this.$emit("lineChange", "delete", this.targetFrom.id);
       } else {
-        allLayers.forEach((curLayer) => {
-          if (curLayer.values_.polygonLayerId === this.targetFrom.id) {
-            this.map.removeLayer(curLayer);
-          }
-        });
         this.$emit("polygonChange", "delete", this.targetFrom.id);
       }
 
@@ -481,6 +474,7 @@ export default {
             geometry: new Point(curpoint.coordinate),
             id: curpoint.id,
             mark: curpoint.mark,
+            ...curpoint,
           })
         );
       });
@@ -512,7 +506,7 @@ export default {
       this.map.addLayer(this.pointLayer);
       console.log(this.map.getLayerGroup().getLayersArray());
 
-      this.setTooptipsPosition();
+      // this.setTooptipsPosition();
     },
 
     // 关闭点图层
@@ -537,17 +531,10 @@ export default {
             id: curline.id,
             math: curline.math,
             mark: curline.mark,
+            ...curline,
           })
         );
       });
-      // const lineFeatures = new Feature({
-      //   geometry: new LineString(curline.lineCoordinate),
-      // });
-      // lineFeatures.setProperties({
-      //   id: curline.id,
-      //   math: curline.math,
-      //   mark: curline.mark,
-      // });
       const vectorLineSource = new VectorSource({
         features: [],
       });
@@ -560,22 +547,21 @@ export default {
         }),
       });
       this.map.addLayer(this.lineLayer);
-      console.log(this.map.getLayerGroup().getLayersArray());
-      this.setTooptipsPosition();
     },
 
     // 关闭通联层
     clearAllLineLayers() {
-      const pointLayers = this.map.getLayerGroup().getLayersArray();
-      pointLayers.forEach((curLayer) => {
-        if (curLayer.get("title") === "mylineLayer")
-          this.map.removeLayer(curLayer);
-      });
+      // const pointLayers = this.map.getLayerGroup().getLayersArray();
+      // pointLayers.forEach((curLayer) => {
+      //   if (curLayer.get("title") === "mylineLayer")
+      //     this.map.removeLayer(curLayer);
+      // });
+      this.map.removeLayer(this.lineLayer)
     },
 
     // 渲染多边形图
     renderPolygonLayer() {
-      this.clearAllPolygonLayers();
+      if(this.polygonLayer) this.map.removeLayer(this.polygonLayer)
       let polygonFeatures = [];
       this.polygonData.map((curpolygon) => {
         const polygonCoordinates = JSON.parse(
@@ -587,38 +573,32 @@ export default {
             id: curpolygon.id,
             math: curpolygon.math,
             mark: curpolygon.mark,
+            ...curpolygon,
           })
         );
       });
 
-     
+
       const vectorPolygonSource = new VectorSource({
         features: [],
       });
       vectorPolygonSource.addFeatures(polygonFeatures);
 
-      const polygonLayer = new VectorLayer({
-        // polygonLayerId: curpolygon.id,
-        title: "mypolygonLayer",
+      this.polygonLayer = new VectorLayer({
         source: vectorPolygonSource,
       });
-      this.map.addLayer(polygonLayer);
-
-      this.setTooptipsPosition();
+      this.map.addLayer(this.polygonLayer);
     },
 
     // 关闭多边形层
     clearAllPolygonLayers() {
-      const pointLayers = this.map.getLayerGroup().getLayersArray();
-      pointLayers.forEach((curLayer) => {
-        if (curLayer.get("title") === "mypolygonLayer")
-          this.map.removeLayer(curLayer);
-      });
+      this.map.removeLayer(this.polygonLayer)
     },
 
     // map点击事件注册
     setTooptipsPosition() {
       this.map.on("singleclick", (e) => {
+        console.log('2222222222222222222')
         if (!this.isDraw) {
           this.infoOverlay.setPosition(undefined); //点击空白处清除弹框
           const pixel = this.map.getEventPixel(e.originalEvent);
@@ -654,7 +634,7 @@ export default {
     // 传回给父组件的信息
     handleClickOnTarget(feature) {
       const featureType = feature.getGeometry().getType();
-      this.$emit("handleClickOnTarget", featureType, this.targetFrom);
+      this.$emit("handleClickOnTarget", featureType, feature.values_);
     },
 
     //点击目标，弹出tooltips
@@ -671,6 +651,7 @@ export default {
       this.targetFrom.coordinate = feature.getGeometry().getCoordinates();
       // console.log(feature.getGeometry().getCoordinates())
       this.infoOverlay.setPosition(clickCoordinate);
+      console.log('我点了一次啊')
       this.handleClickOnTarget(feature);
     },
   },
