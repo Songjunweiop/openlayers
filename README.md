@@ -1,25 +1,6 @@
-# openlayerstest1
+#### 单击地图事件
 
-## Project setup
-```
-npm install
-```
-
-### Compiles and hot-reloads for development
-```
-npm run serve
-```
-
-### Compiles and minifies for production
-```
-npm run build
-```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
-
-
-单击地图事件
+```js
 this.map.on("singleclick", (e) => {
   if (!this.isDraw) {
     // console.log(e.coordinate);   // 鼠标点击的坐标
@@ -36,39 +17,46 @@ this.map.on("singleclick", (e) => {
       console.log(feature.getProperties());
 
       // console.log(feature.getGeometry().getCoordinates());   //渲染出来的point的精确坐标，而不是点击的坐标
-
+    
       if (feature.getProperties().id && !this.isDraw) {
         //如果是已存在目标的点击
         console.log(localPoint);
         console.log("我有选中这个点吗");
         this.displayInfoForm(feature, e.coordinate);
       }
-
+    
       // console.log(this.infoOverlay.getPosition());
     } else {
     }
+
   }
 });
+```
 
-关闭tooptips
- // closer.onclick = () => {
-  //   this.overlay.setPosition(undefined);
-  //   closer.blur();
-  //   return false;
-  // };
+#### 关闭tooptips
 
-//地图双击事件
+```js
+closer.onclick = () => {
+    this.overlay.setPosition(undefined);
+    closer.blur();
+    return false;
+};
+```
+
+#### 地图双击事件
+
+```js
   map.on("dblclick", function (evt) {
     var point = new Point(evt.coordinate);
     source.addFeature(new Feature(point));
     // idea = false;
 
     // alert(idea)
+
   });
 
   CecTileMap @createPoint={fetch}
-
-
+  
   console.log(this.map.getLayers())
   console.log(this.map.getLayers().array_)
   const aa = this.map.getLayers().array_.map((curitem)=>{
@@ -76,68 +64,47 @@ this.map.on("singleclick", (e) => {
     console.log(curitem.values_)
     // if()
   })
+```
 
-  //移动点
-  // const modify = new olInteraction.Modify({ source: vectorPointSource });
-  // this.map.addInteraction(modify);
-  // console.log(modify);
+####   移动点
 
-  // const modify = new olInteraction.Modify({ source: vectorLineSource });
-  // this.map.addInteraction(modify);
+```js
+const modify = new olInteraction.Modify({ source: vectorPointSource });
+this.map.addInteraction(modify);
+console.log(modify);
 
+const modify = new olInteraction.Modify({ source: vectorLineSource });
+this.map.addInteraction(modify);
+```
 
-//已知点的坐标的坐标
-// console.log(pointFeatures.getGeometry());
-// console.log(
-//   pointFeatures.getGeometry().getCoordinates() 
-// );
+#### 已知点的坐标的坐标
 
+```js
+console.log(pointFeatures.getGeometry());
+console.log(
+    pointFeatures.getGeometry().getCoordinates() 
+);
+```
 
-console.log(this.map.getLayers());
-let pointLayers = this.map.getLayers().array_;
-pointLayers = lodash.cloneDeep(pointLayers);
-// console.log(pointLayers)
-// console.log( Array.isArray(pointLayers))
-// console.log(pointLayers.constructor === Array)
-pointLayers.forEach((curlayer) => {
-  // console.log('我进来几次')
-  // console.log(curlayer)
-  // console.log(curlayer.values_.title)
-  if (curlayer.values_.title === "mypointLayer") {
-    console.log("我删除了图层");
-    // console.log(curlayer)
-    this.map.removeLayer(curlayer);
-  }
-});
-// const length = pointLayers.length
-// for(let i = 0; i<length;i++) {
-//        if (pointLayers[i].values_.title === "mypointLayer") {
-//     this.map.removeLayer(curlayer);
-//   }
-// }
-console.log(pointLayers);
-console.log(this.map.getLayers().array_);
+#### 点击下拉框绘制要创建的画点、线、面
 
-
-// 点击下拉框绘制要创建的画点、线、面
     toggleDrawmapLayer() {
       if (this.drawmapLayer) this.map.removeLayer(this.drawmapLayer);
       console.log("执行了吗");
-
       const source = new VectorSource({ wrapX: false });
       this.drawmapLayer = new VectorLayer({
         source: source,
       });
-
+    
       // 选择标记类型
       if (this.selectedDrawValue !== "None") {
         if(this.selectedDrawValue === 'LineString'){
-
+    
         }else if(this.selectedDrawValue === 'Polygon'){
-
+    
         }
         this.map.removeInteraction(this.draw);
-
+    
         this.draw = new olInteraction.Draw({
           source: source,
           type: this.selectedDrawValue,
@@ -149,7 +116,7 @@ console.log(this.map.getLayers().array_);
         console.log(this.draw);
         this.isDraw = false;
       }
-
+    
       this.draw.on("drawstart", (e) => {
         this.isDraw = true;
         this.selectedDrawValue = e.target.type_;
@@ -171,7 +138,29 @@ console.log(this.map.getLayers().array_);
         }
         this.addOverlay.setPosition(finishCoordinate);
       });
-
+    
       // this.setTooptipsPosition();
       this.map.addLayer(this.drawmapLayer);
     },
+
+## 二、坐标
+
+#### 1. 坐标之间的转换
+
+```js
+import { transform } from "ol/proj";
+transform(coordinate, "EPSG:4326", "EPSG:3857")
+```
+
+#### 2.控制鼠标位置的坐标
+
+```js
+controls: olControl.defaults().extend([
+    new olControl.FullScreen(),
+    new olControl.ZoomSlider(),
+    new olControl.MousePosition({
+    	projection: "EPSG:4326",
+    }),
+]),
+```
+
