@@ -77,15 +77,6 @@ const modify = new olInteraction.Modify({ source: vectorLineSource });
 this.map.addInteraction(modify);
 ```
 
-#### 已知点的坐标的坐标
-
-```js
-console.log(pointFeatures.getGeometry());
-console.log(
-    pointFeatures.getGeometry().getCoordinates() 
-);
-```
-
 #### 点击下拉框绘制要创建的画点、线、面
 
     toggleDrawmapLayer() {
@@ -143,7 +134,15 @@ console.log(
       this.map.addLayer(this.drawmapLayer);
     },
 
-## 二、坐标
+## 一、图层
+
+#### 1.获取当前map的所有图层数组
+
+```js
+console.log(this.map.getLayerGroup().getLayersArray())
+```
+
+## 二、投影和坐标
 
 #### 1. 坐标之间的转换
 
@@ -152,7 +151,7 @@ import { transform } from "ol/proj";
 transform(coordinate, "EPSG:4326", "EPSG:3857")
 ```
 
-#### 2.控制鼠标位置的坐标
+#### 2. 控制鼠标位置的坐标
 
 ```js
 controls: olControl.defaults().extend([
@@ -164,3 +163,19 @@ controls: olControl.defaults().extend([
 ]),
 ```
 
+#### 3. 获取当前map的投影模式
+
+```js
+console.log(this.map.getView().getProjection())
+```
+
+#### 4. 已知点的坐标的坐标
+
+```js
+console.log(pointFeatures.getGeometry());
+console.log(
+    pointFeatures.getGeometry().getCoordinates() 
+);
+```
+
+#### 
